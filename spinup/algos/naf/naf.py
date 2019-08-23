@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf
 import gym
 import time
-from spinup.algos.ddpg import core
-from spinup.algos.ddpg.core import get_vars
+from spinup.algos.naf import core
+from spinup.algos.naf.core import get_vars
 from spinup.utils.logx import EpochLogger
 
 
@@ -45,20 +45,17 @@ Normalized Advantage Function (NAF)
 """
 
 
-def naf(env_fn, sess, strategy, pred_network, target_network, stat,
-        gamma=0.99, batch_size=100, q_lr=1e-3,seed=0,ac_kwargs=dict(),
-        max_ep_len=1000, update_repeat=5, max_episodes=100,logger_kwargs=dict()):
-    # actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
-    #      steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.99,
-    #      polyak=0.995, pi_lr=1e-3, q_lr=1e-3, batch_size=100, start_steps=10000,
-    #      act_noise=0.1, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
+def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_function, ac_kwargs=dict(), seed=0,
+        steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.99,
+        polyak=0.999, q_lr=1e-3, batch_size=100, start_steps=100, update_repeat=5,
+        act_noise=0.1, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
 
     Args:
         env_fn : A function which creates a copy of the environment.
             The environment must satisfy the OpenAI Gym API.
 
-        actor_critic: A function which takes in placeholder symbols
+        normalized_advantage_function: A function which takes in placeholder symbols
             for state, ``x_ph``, and action, ``a_ph``, and returns the main
             outputs from the agent's Tensorflow computation graph:
 
@@ -99,7 +96,7 @@ def naf(env_fn, sess, strategy, pred_network, target_network, stat,
             where :math:`\\rho` is polyak. (Always between 0 and 1, usually
             close to 1.)
 
-        pi_lr (float): Learning rate for policy.
+        q_lr (float): Learning rate for policy.
 
         q_lr (float): Learning rate for Q-networks.
 
@@ -137,37 +134,34 @@ def naf(env_fn, sess, strategy, pred_network, target_network, stat,
     ac_kwargs['action_space'] = env.action_space
 
     # Inputs to computation graph
-    x_ph, a_ph, x2_ph, r_ph, d_ph = core.placeholders(obs_dim, act_dim, obs_dim, None, None)
+    x_ph, a_ph, x2_ph, r_ph, d_ph, target_y = core.placeholders(obs_dim, act_dim, obs_dim, None, None, None)
 
     # Main outputs from computation graph
     with tf.variable_scope('main'):
-        pi, q, q_pi = actor_critic(x_ph, a_ph, **ac_kwargs)
-
+        mu, V, Q, P, A = normalized_advantage_function(x_ph, a_ph, **ac_kwargs)
+    print(get_vars('main'))
     # Target networks
     with tf.variable_scope('target'):
         # Note that the action placeholder going to actor_critic here is
         # irrelevant, because we only need q_targ(s, pi_targ(s)).
-        pi_targ, _, q_pi_targ = actor_critic(x2_ph, a_ph, **ac_kwargs)
+        mu_targ, V_targ, Q_targ, P_targ, A_targ = normalized_advantage_function(x2_ph, a_ph, **ac_kwargs)
 
     # Experience buffer
     replay_buffer = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, size=replay_size)
 
     # Count variables
-    var_counts = tuple(core.count_vars(scope) for scope in ['main/pi', 'main/q', 'main'])
-    print('\nNumber of parameters: \t pi: %d, \t q: %d, \t total: %d\n' % var_counts)
+    var_counts = tuple(core.count_vars(scope) for scope in ['main/value', 'main/andvatage', 'main'])
+    print('\nNumber of parameters: \t value: %d, \t advantage: %d, \t total: %d\n' % var_counts)
 
+    sess = tf.Session()
     # Bellman backup for Q function
-    backup = tf.stop_gradient(r_ph + gamma * (1 - d_ph) * q_pi_targ)
 
-    # DDPG losses
-    pi_loss = -tf.reduce_mean(q_pi)
-    q_loss = tf.reduce_mean((q - backup) ** 2)
+    # NAF losses
+    q_loss = tf.reduce_mean((tf.squeeze(Q) - target_y) ** 2)
 
-    # Separate train ops for pi, q
-    pi_optimizer = tf.train.AdamOptimizer(learning_rate=pi_lr)
+    # Train ops for q
     q_optimizer = tf.train.AdamOptimizer(learning_rate=q_lr)
-    train_pi_op = pi_optimizer.minimize(pi_loss, var_list=get_vars('main/pi'))
-    train_q_op = q_optimizer.minimize(q_loss, var_list=get_vars('main/q'))
+    train_q_op = q_optimizer.minimize(q_loss, var_list=get_vars('main'))
 
     # Polyak averaging for target variables
     target_update = tf.group([tf.assign(v_targ, polyak * v_targ + (1 - polyak) * v_main)
@@ -177,15 +171,14 @@ def naf(env_fn, sess, strategy, pred_network, target_network, stat,
     target_init = tf.group([tf.assign(v_targ, v_main)
                             for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
-    sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     sess.run(target_init)
 
     # Setup model saving
-    logger.setup_tf_saver(sess, inputs={'x': x_ph, 'a': a_ph}, outputs={'pi': pi, 'q': q})
+    logger.setup_tf_saver(sess, inputs={'x': x_ph, 'a': a_ph}, outputs={'mu': mu, 'V': V, 'Q': Q, 'P': P, 'A': A})
 
     def get_action(o, noise_scale):
-        a = sess.run(pi, feed_dict={x_ph: o.reshape(1, -1)})[0]
+        a = sess.run(mu, feed_dict={x_ph: o.reshape(1, -1)})[0]
         a += noise_scale * np.random.randn(act_dim)
         return np.clip(a, -act_limit, act_limit)
 
@@ -233,12 +226,13 @@ def naf(env_fn, sess, strategy, pred_network, target_network, stat,
         # most recent observation!
         o = o2
 
+        # TODO: Change to update per step
         if d or (ep_len == max_ep_len):
             """
-            Perform all DDPG updates at the end of the trajectory,
+            Perform all NAF updates at the end of the trajectory,
             in accordance with tuning done by TD3 paper authors.
             """
-            for _ in range(ep_len):
+            for iteration in range(update_repeat * ep_len):
                 batch = replay_buffer.sample_batch(batch_size)
                 feed_dict = {x_ph: batch['obs1'],
                              x2_ph: batch['obs2'],
@@ -248,12 +242,19 @@ def naf(env_fn, sess, strategy, pred_network, target_network, stat,
                              }
 
                 # Q-learning update
-                outs = sess.run([q_loss, q, train_q_op], feed_dict)
-                logger.store(LossQ=outs[0], QVals=outs[1])
 
-                # Policy update
-                outs = sess.run([pi_loss, train_pi_op, target_update], feed_dict)
-                logger.store(LossPi=outs[0])
+                # 1. calculate value function
+                value = sess.run(V_targ, feed_dict={x2_ph: batch['obs2'], a_ph: batch['acts']})
+                # TODO: Formulate in tensorflow?
+                # 2. calculate target value according to Bellman
+                target_y_value = gamma * np.squeeze(value) + np.array(batch['rews'])
+                outs = sess.run([train_q_op, q_loss, Q, V, A, target_update],
+                                {target_y: target_y_value,
+                                 x_ph: batch['obs1'],
+                                 a_ph: batch['acts'],
+                                 d_ph: batch['done']
+                                 })
+                logger.store(LossQ=outs[1], QVals=outs[2])
 
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
@@ -277,7 +278,6 @@ def naf(env_fn, sess, strategy, pred_network, target_network, stat,
             logger.log_tabular('TestEpLen', average_only=True)
             logger.log_tabular('TotalEnvInteracts', t)
             logger.log_tabular('QVals', with_min_and_max=True)
-            logger.log_tabular('LossPi', average_only=True)
             logger.log_tabular('LossQ', average_only=True)
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
@@ -300,7 +300,7 @@ if __name__ == '__main__':
 
     logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
 
-    naf(lambda: gym.make(args.env), actor_critic=core.mlp_actor_critic,
-         ac_kwargs=dict(hidden_sizes=[args.hid] * args.l),
-         gamma=args.gamma, seed=args.seed, epochs=args.epochs,
-         logger_kwargs=logger_kwargs)
+    naf(lambda: gym.make(args.env), normalized_advantage_function=core.mlp_actor_critic,
+        ac_kwargs=dict(hidden_sizes=[args.hid] * args.l),
+        gamma=args.gamma, seed=args.seed, epochs=args.epochs,
+        logger_kwargs=logger_kwargs)

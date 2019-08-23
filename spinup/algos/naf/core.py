@@ -30,32 +30,29 @@ def mlp_normalized_advantage_function(x, a, hidden_sizes=(400,300), activation=t
 
     # create a shared network for the variables
     hid_outs ={}
+    # TODO: Check the availability of the variables in the scope
     with tf.variable_scope('hidden'):
-        h = mlp(x, list(hidden_sizes) + [1], activation, output_activation)
+        h = mlp(x, list(hidden_sizes), activation, output_activation)
         hid_outs['v'], hid_outs['l'], hid_outs['mu'] = h, h, h
 
     with tf.variable_scope('value'):
         V = mlp(hid_outs['v'], [1])
 
     with tf.variable_scope('advantage'):
-        l = mlp(hid_outs['l'], (act_dim * (act_dim + 1)) / 2)
-        mu = act_limit*mlp( hid_outs['mu'], act_dim, activation=activation, output_activation=output_activation)
-
+        l = mlp(hid_outs['l'], [(act_dim * (act_dim + 1)) / 2])
+        mu = act_limit*mlp( hid_outs['mu'], [act_dim], activation=activation, output_activation=output_activation)
         pivot = 0
         rows = []
         for idx in range(act_dim):
             count = act_dim - idx
-
             diag_elem = tf.exp(tf.slice(l, (0, pivot), (-1, 1)))
             non_diag_elems = tf.slice(l, (0, pivot + 1), (-1, count - 1))
             row = tf.pad(tf.concat((diag_elem, non_diag_elems), 1), ((0, 0), (idx, 0)))
             rows.append(row)
-
             pivot += count
 
         L = tf.transpose(tf.stack(rows, axis=1), (0, 2, 1))
         P = tf.matmul(L, tf.transpose(L, (0, 2, 1)))
-
         tmp = tf.expand_dims(a - mu, -1)
         A = -tf.matmul(tf.transpose(tmp, [0, 2, 1]), tf.matmul(P, tmp)) / 2
         A = tf.reshape(A, [-1, 1])
@@ -63,4 +60,4 @@ def mlp_normalized_advantage_function(x, a, hidden_sizes=(400,300), activation=t
     with tf.variable_scope('Q'):
         Q = A + V
 
-    return x, a, mu, V, Q, P, A
+    return mu, V, Q, P, A
