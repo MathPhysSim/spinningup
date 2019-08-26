@@ -11,8 +11,6 @@ env = transport.transportENV()
 
 env_fn = lambda: env
 
-
-
 # if __name__ == '__main__':
 #
 #     eg = ExperimentGrid(name='twiss-bench')
@@ -25,7 +23,7 @@ env_fn = lambda: env
 #     eg.add('ac_kwargs:activation', [tf.nn.relu], '')
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
 
-agent = ddpg(env_fn=env_fn, gamma=0.99, start_steps=100, batch_size=50)
+agent = ddpg(env_fn=env_fn, gamma=0.999, start_steps=1000, steps_per_epoch=1000, epochs=50)
 
 # env, get_action = load_policy('path/logging1')
 

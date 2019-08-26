@@ -28,7 +28,7 @@ class transportENV(gym.Env):
 
         # General variables defining the environment
         self.MAX_POS = 12
-        self.MAX_TIME = 50
+        self.MAX_TIME = 500
         self.curr_step = -1
         self.is_finalized = False
         self.mssb = twiss.twissElement(16.1, -0.397093117, 0.045314011, 1.46158005)
@@ -113,7 +113,7 @@ class transportENV(gym.Env):
         return np.array(state), reward, self.is_finalized, {}
 
     def _take_action(self, action):
-        action *=1e-3
+        action *=1e-2
         mssb_delta, mbb_delta = action
 
         self.action_episode_memory[self.curr_episode].append(action)
@@ -130,6 +130,7 @@ class transportENV(gym.Env):
         if (self.intensity_on_target[0] > 0.8):  # or np.abs(self.beam_pos)>0.05):
             print("shorter ", self.intensity_on_target[0], self.beam_pos, self.counter)
             time_is_over = True
+            reward = 100
         else:
             reward=-1
         throw_away = time_is_over
@@ -183,18 +184,22 @@ class transportENV(gym.Env):
         self.states.append([])
         self.is_finalized = False
         self.x0 = 0.
-        print("beam_pos ", self.beam_pos)
-        print("intensity ", self.intensity_on_target)
-        self.mssb_angle = np.random.uniform(-0.002, 0.002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
-        self.mbb_angle = np.random.uniform(-0.002, 0.002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
+        # print("beam_pos ", self.beam_pos)
+        # print("intensity ", self.intensity_on_target)
+        self.intensity_on_target = [1]
+        while (self.intensity_on_target[0] > 0.8):
+            self.mssb_angle = np.random.uniform(-0.0002, 0.0002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
+            self.mbb_angle = np.random.uniform(-0.0002, 0.0002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
+            self.state, reward = self._get_state_and_reward()
+            state = self.state
 
-        print("initial: ", self.mssb_angle, self.mbb_angle)
+        # print("initial: ", self.mssb_angle, self.mbb_angle)
 
         self.counter = 0
 
         self.state, reward = self._get_state_and_reward()
         state = self.state
-        print("initial beam_pos: ", self.beam_pos, state[0], state[1])
+        # print("initial beam_pos: ", self.beam_pos, state[0], state[1])
         # print("Observable", state, self.bhn10_value)
         return np.array(state)
 
@@ -280,3 +285,23 @@ class transportENV(gym.Env):
 
 if __name__ == '__main__':
     env = transportENV()
+
+    nb_steps = 250
+    init_angles = []
+    init_pos = []
+    init_rewards = []
+
+    for i in range(nb_steps):
+        env.reset()
+        init_pos.append(env.state)
+        init_rewards.append(env.reward)
+        init_angles.append([env.mssb_angle, env.mbb_angle])
+
+    init_pos.append([0., min(np.array(init_pos)[:, 1])])
+    init_pos = np.array(init_pos)
+
+    plot_name = 'Old'
+    name = plot_name
+    plt.scatter(init_pos[:-1, 0], init_pos[:-1, 1], c=init_rewards, alpha=0.1)
+    plt.title(name)
+    plt.show()
