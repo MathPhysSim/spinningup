@@ -50,7 +50,7 @@ class transportENV(gym.Env):
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
         # Observation is the position
-        self.MAX_POS = 1.
+        self.MAX_POS = 0.1
         low = np.array([-self.MAX_POS, -self.MAX_POS])
         high = np.array([self.MAX_POS, self.MAX_POS])
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
@@ -128,11 +128,11 @@ class transportENV(gym.Env):
         # print("just before check ",self.intensity_on_target[0])
         state, reward = self._get_state_and_reward()
         if (self.intensity_on_target[0] > 0.8):  # or np.abs(self.beam_pos)>0.05):
-            print("shorter ", self.intensity_on_target[0], self.beam_pos, self.counter)
+            # print("shorter ", self.intensity_on_target[0], self.beam_pos, self.counter)
             time_is_over = True
             reward = 100
         else:
-            reward=-1
+            reward = -1/(.25+reward)
         throw_away = time_is_over
         # self.rewards[self.curr_episode].append(reward)
         # self.states_1[self.curr_episode].append(state[0])
@@ -187,7 +187,7 @@ class transportENV(gym.Env):
         # print("beam_pos ", self.beam_pos)
         # print("intensity ", self.intensity_on_target)
         self.intensity_on_target = [1]
-        while (self.intensity_on_target[0] > 0.8):
+        while (self.intensity_on_target[0] > 0.9):
             self.mssb_angle = np.random.uniform(-0.0002, 0.0002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
             self.mbb_angle = np.random.uniform(-0.0002, 0.0002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
             self.state, reward = self._get_state_and_reward()

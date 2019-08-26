@@ -1,7 +1,8 @@
 import Environments.transport_enviroment as transport
 import tensorflow as tf
 from spinup.algos.ddpg.ddpg import ddpg
-
+from spinup.algos.ppo.ppo import ppo
+from spinup.algos.td3.td3 import td3
 from spinup.utils.run_utils import ExperimentGrid
 
 from spinup.algos.naf.naf import naf
@@ -23,7 +24,7 @@ env_fn = lambda: env
 #     eg.add('ac_kwargs:activation', [tf.nn.relu], '')
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
 
-agent = ddpg(env_fn=env_fn, gamma=0.999, start_steps=1000, steps_per_epoch=1000, epochs=50)
+agent = td3(env_fn=env_fn)
 
 # env, get_action = load_policy('path/logging1')
 
