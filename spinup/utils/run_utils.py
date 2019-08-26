@@ -167,9 +167,7 @@ def call_experiment(exp_name, thunk, seed=0, num_cpu=1, data_dir=None,
 
     entrypoint = osp.join(osp.abspath(osp.dirname(__file__)),'run_entrypoint.py')
     cmd = [sys.executable if sys.executable else 'python', entrypoint, encoded_thunk]
-    print('Simon '*30)
-    print(cmd)
-    print('Simon ' * 30)
+
     try:
         subprocess.check_call(cmd, env=os.environ)
     except CalledProcessError:

@@ -13,20 +13,19 @@ env_fn = lambda: env
 
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+#
+#     eg = ExperimentGrid(name='twiss-bench')
+#     eg.add('env_fn', env_fn, '', True)
+#     eg.add('seed', [10 * i for i in range(2)])
+#     eg.add('epochs', 25)
+#     eg.add('steps_per_epoch', 1000)
+#     eg.add('start_steps', 100)
+#     eg.add('ac_kwargs:hidden_sizes', [(400, 300)], 'hid')
+#     eg.add('ac_kwargs:activation', [tf.nn.relu], '')
+#     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
 
-    eg = ExperimentGrid(name='twiss-bench')
-    eg.add('env_fn', env_fn, '', True)
-    eg.add('seed', [10 * i for i in range(2)])
-    eg.add('epochs', 25)
-    eg.add('steps_per_epoch', 1000)
-    eg.add('start_steps', 100)
-    eg.add('ac_kwargs:hidden_sizes', [(400, 300)], 'hid')
-    eg.add('ac_kwargs:activation', [tf.nn.relu], '')
-    eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
-
-# agent = spinup.ddpg(env_fn=env_fn, ac_kwargs=ac_kwargs, steps_per_epoch=steps_per_epoch,
-#                        epochs=epochs, logger_kwargs=logger_kwargs, gamma=0.99, start_steps=100, batch_size=50)
+agent = ddpg(env_fn=env_fn, gamma=0.99, start_steps=100, batch_size=50)
 
 # env, get_action = load_policy('path/logging1')
 
