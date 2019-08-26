@@ -46,8 +46,8 @@ Normalized Advantage Function (NAF)
 
 
 def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_function, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.99,
-        polyak=0.999, q_lr=1e-3, batch_size=100, start_steps=100, update_repeat=5,
+        steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.999,
+        polyak=0.995, q_lr=1e-3, batch_size=100, start_steps=100, update_repeat=5,
         act_noise=0.1, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
 
@@ -134,7 +134,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     ac_kwargs['action_space'] = env.action_space
 
     # Inputs to computation graph
-    x_ph, a_ph, x2_ph, r_ph, d_ph, target_y = core.placeholders(obs_dim, act_dim, obs_dim, None, None, None)
+    x_ph, a_ph, x2_ph, r_ph, d_ph, target = core.placeholders(obs_dim, act_dim, obs_dim, None, None, None)
 
     # Main outputs from computation graph
     with tf.variable_scope('main'):
@@ -157,7 +157,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     # Bellman backup for Q function
 
     # NAF losses
-    q_loss = tf.reduce_mean((tf.squeeze(Q) - target_y) ** 2)
+    q_loss = tf.reduce_mean((tf.squeeze(Q) - target) ** 2)
 
     # Train ops for q
     q_optimizer = tf.train.AdamOptimizer(learning_rate=q_lr)
@@ -243,13 +243,13 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
                 # Q-learning update
 
-                # 1. calculate value function
-                value = sess.run(V_targ, feed_dict={x2_ph: batch['obs2'], a_ph: batch['acts']})
+                # 1. Calculate value function
+                value = sess.run(V_targ, feed_dict=feed_dict)
                 # TODO: Formulate in tensorflow?
-                # 2. calculate target value according to Bellman
-                target_y_value = gamma * np.squeeze(value) + np.array(batch['rews'])
+                # 2. Calculate target value according to Bellman
+                target_value = gamma * np.squeeze(value) + np.array(batch['rews'])
                 outs = sess.run([train_q_op, q_loss, Q, V, A, target_update],
-                                {target_y: target_y_value,
+                                {target: target_value,
                                  x_ph: batch['obs1'],
                                  a_ph: batch['acts'],
                                  d_ph: batch['done']
