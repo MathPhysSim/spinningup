@@ -47,7 +47,7 @@ Normalized Advantage Function (NAF)
 
 def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_function, ac_kwargs=dict(), seed=0,
         steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.999,
-        polyak=0.995, q_lr=1e-3, batch_size=100, start_steps=100, update_repeat=5,
+        polyak=0.9995, q_lr=1e-4, batch_size=100, start_steps=100, update_repeat=5,
         act_noise=0.1, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
 
@@ -67,13 +67,10 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
             ``q``        (batch,)          | Gives the current estimate of Q* for
                                            | states in ``x_ph`` and actions in
                                            | ``a_ph``.
-            ``q_pi``     (batch,)          | Gives the composition of ``q`` and
-                                           | ``pi`` for states in ``x_ph``:
-                                           | q(x, pi(x)).
             ===========  ================  ======================================
 
-        ac_kwargs (dict): Any kwargs appropriate for the actor_critic
-            function you provided to DDPG.
+        normalized_advantage_function (dict): Any kwargs appropriate for the normalized_advantage_function
+            function you provided to NAF.
 
         seed (int): Seed for random number generators.
 
@@ -227,12 +224,12 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         o = o2
 
         # TODO: Change to update per step
-        if d or (ep_len == max_ep_len):
+        if True:
             """
             Perform all NAF updates at the end of the trajectory,
             in accordance with tuning done by TD3 paper authors.
             """
-            for iteration in range(update_repeat * ep_len):
+            for iteration in range(update_repeat):
                 batch = replay_buffer.sample_batch(batch_size)
                 feed_dict = {x_ph: batch['obs1'],
                              x2_ph: batch['obs2'],
@@ -256,6 +253,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
                                  })
                 logger.store(LossQ=outs[1], QVals=outs[2])
 
+        if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
 
