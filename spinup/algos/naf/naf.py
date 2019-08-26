@@ -136,7 +136,6 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     # Main outputs from computation graph
     with tf.variable_scope('main'):
         mu, V, Q, P, A = normalized_advantage_function(x_ph, a_ph, **ac_kwargs)
-    print(get_vars('main'))
     # Target networks
     with tf.variable_scope('target'):
         # Note that the action placeholder going to actor_critic here is
@@ -147,7 +146,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     replay_buffer = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, size=replay_size)
 
     # Count variables
-    var_counts = tuple(core.count_vars(scope) for scope in ['main/value', 'main/andvatage', 'main'])
+    var_counts = tuple(core.count_vars(scope) for scope in ['main/value', 'main/advantage', 'main'])
     print('\nNumber of parameters: \t value: %d, \t advantage: %d, \t total: %d\n' % var_counts)
 
     sess = tf.Session()

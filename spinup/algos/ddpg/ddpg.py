@@ -136,7 +136,6 @@ def ddpg(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     # Main outputs from computation graph
     with tf.variable_scope('main'):
         pi, q, q_pi = actor_critic(x_ph, a_ph, **ac_kwargs)
-    print(get_vars('main'))
     # Target networks
     with tf.variable_scope('target'):
         # Note that the action placeholder going to actor_critic here is 
