@@ -49,11 +49,11 @@ class transportENV(gym.Env):
         low = np.array([-self.MAX_POS, -self.MAX_POS])
         high = np.array([self.MAX_POS, self.MAX_POS])
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
-        self.MAX_POS = 1e-1
+
+        self.MAX_POS = 1
         low = np.array([-self.MAX_POS, -self.MAX_POS])
         high = np.array([self.MAX_POS, self.MAX_POS])
-        self.actions = spaces.Box(low, high, dtype=np.float32)
+        self.action_space = spaces.Box(low, high, dtype=np.float32)
 
         self.counter = 0
         self.seed()
