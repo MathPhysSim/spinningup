@@ -1,4 +1,8 @@
-import Environments.transport_enviroment as transport
+import gym
+
+from spinup.algos.sac.sac import sac
+
+import Environments.transportEnvOld as transport
 import tensorflow as tf
 from spinup.algos.ddpg.ddpg import ddpg
 from spinup.algos.ppo.ppo import ppo
@@ -27,10 +31,10 @@ env_fn = lambda: env
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
 
 
-output_dir = 'logging/TD3'
+output_dir = 'logging/new_environment/td3/'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = td3(env_fn=env_fn, epochs=15, steps_per_epoch=1000, logger_kwargs=logger_kwargs, polyak=0.9999,
-            batch_size=50, gamma=0.9999, q_lr=1e-4, start_steps=500)
+agent = td3(env_fn=env_fn, epochs=100, steps_per_epoch=1000, logger_kwargs=logger_kwargs
+            ,act_noise=0.005)
 
 
 plot_name = 'Stats'

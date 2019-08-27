@@ -9,7 +9,7 @@ from spinup.utils.logx import EpochLogger
 
 class ReplayBuffer:
     """
-    A simple FIFO experience replay buffer for DDPG agents.
+    A simple FIFO experience replay buffer for NAF agents.
     """
 
     def __init__(self, obs_dim, act_dim, size):
@@ -41,6 +41,17 @@ class ReplayBuffer:
 """
 
 Normalized Advantage Function (NAF)
+
+Some commende on the NAF implementation:
+
+Missing functionality: 
+- [ ] Separate networks
+- [ ] batch_norm
+- [ ] Regularization
+
+Changed functionality:
+- [ ] Target network to Polyak averaging
+- [ ] Init. of networks
 
 """
 
@@ -236,7 +247,8 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
                 # Q-learning update
 
                 # 1. Calculate value function
-                value = sess.run(V_targ, feed_dict=feed_dict)
+                value = sess.run(V_targ, feed_dict={x2_ph: batch['obs2'],
+                                                    a_ph: batch['acts']})
                 # TODO: Formulate in Tensorflow?
                 # 2. Calculate target value according to Bellman
                 target_value = gamma * np.squeeze(value) + np.array(batch['rews'])

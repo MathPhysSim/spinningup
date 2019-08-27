@@ -45,8 +45,6 @@ class transportENV(gym.Env):
         self.mbb_angle = self.mbb_angle_0
 
         # Define what the agent can do
-        # Increase, decrease and wait
-        # self.action_space = spaces.Discrete(3)
         high = np.array([-1, 1])
         low = np.array([-1, 1])
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float32)
@@ -108,10 +106,6 @@ class transportENV(gym.Env):
         #    raise RuntimeError("Episode is done")
         self.curr_step += 1
         state, reward = self._take_action(action)
-
-        # print("reward, reward ",reward)
-
-        # reward -=self.counter*0.000001
         return np.array(state), reward, self.is_finalized, {}
 
     def _take_action(self, action):
@@ -184,7 +178,7 @@ class transportENV(gym.Env):
         self.counter = 0
         self.start_nr += 1
 
-        initial_variation = 2e-3
+        initial_variation = 1e-3
 
         if not (initial_angles):
             while self.criteria:
@@ -272,3 +266,23 @@ def transport(element1, element2, x, px):
     m22 = math.sqrt(beta1 / beta2) * (math.cos(mu) - alpha2 * math.sin(mu))
 
     return m11 * x + m12 * px, m21 * x + m22 * px
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    nb_steps = 250
+    init_angles = []
+    init_pos = []
+    init_rewards = []
+    env = transportENV()
+    for i in range(nb_steps):
+        env.reset()
+        init_pos.append(env.state)
+        init_rewards.append(env.reward)
+        init_angles.append([env.mssb_angle, env.mbb_angle])
+
+    init_pos.append([0., min(np.array(init_pos)[:, 1])])
+    init_pos = np.array(init_pos)
+
+    plt.scatter(init_pos[:-1, 0], init_pos[:-1, 1], c=init_rewards, alpha=0.1)
+    plt.show()
