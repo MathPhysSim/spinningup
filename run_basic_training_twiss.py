@@ -4,6 +4,8 @@ from spinup.algos.ddpg.ddpg import ddpg
 from spinup.algos.ppo.ppo import ppo
 from spinup.algos.td3.td3 import td3
 from spinup.utils.run_utils import ExperimentGrid
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from spinup.algos.naf.naf import naf
 
@@ -23,8 +25,22 @@ env_fn = lambda: env
 #     eg.add('ac_kwargs:hidden_sizes', [(400, 300)], 'hid')
 #     eg.add('ac_kwargs:activation', [tf.nn.relu], '')
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
+output_dir = 'logging/test'
+logger_kwargs = dict(output_dir=output_dir, exp_name='ppo twiss')
+agent = ppo(env_fn=env_fn, epochs=100, steps_per_epoch=10000, logger_kwargs=logger_kwargs)
 
-agent = td3(env_fn=env_fn)
+
+plot_name = 'Stats'
+name = plot_name
+data = pd.read_csv(output_dir+'/progress.txt', sep="\t")
+
+data.index = data['TotalEnvInteracts']
+data_plot= data[['EpLen', 'MinEpRet', 'AverageEpRet']]
+data_plot.plot(secondary_y=['MinEpRet', 'AverageEpRet'])
+
+plt.title(name)
+# plt.savefig(name + '.pdf')
+plt.show()
 
 # env, get_action = load_policy('path/logging1')
 
