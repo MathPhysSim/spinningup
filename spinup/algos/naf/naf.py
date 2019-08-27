@@ -59,7 +59,7 @@ Changed functionality:
 def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_function, ac_kwargs=dict(), seed=0,
         steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.999,
         polyak=0.9995, q_lr=1e-4, batch_size=100, start_steps=500, update_repeat=5,
-        act_noise=0.1, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
+        act_noise=0.001, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
 
     Args:

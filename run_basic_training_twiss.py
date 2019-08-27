@@ -31,10 +31,10 @@ env_fn = lambda: env
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
 
 
-output_dir = 'logging/new_environment/td3/'
+output_dir = 'logging/new_environment/naf/'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = td3(env_fn=env_fn, epochs=100, steps_per_epoch=1000, logger_kwargs=logger_kwargs
-            ,act_noise=0.005)
+agent = naf(env_fn=env_fn, epochs=40, steps_per_epoch=5000, logger_kwargs=logger_kwargs,
+            gamma=0.99)
 
 
 plot_name = 'Stats'
