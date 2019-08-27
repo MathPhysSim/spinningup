@@ -47,7 +47,7 @@ Normalized Advantage Function (NAF)
 
 def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_function, ac_kwargs=dict(), seed=0,
         steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.999,
-        polyak=0.9995, q_lr=1e-4, batch_size=100, start_steps=100, update_repeat=5,
+        polyak=0.9995, q_lr=1e-4, batch_size=100, start_steps=500, update_repeat=5,
         act_noise=0.1, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
 
@@ -92,8 +92,6 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
             where :math:`\\rho` is polyak. (Always between 0 and 1, usually
             close to 1.)
-
-        q_lr (float): Learning rate for policy.
 
         q_lr (float): Learning rate for Q-networks.
 
@@ -154,7 +152,6 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
     # NAF losses
     q_loss = tf.reduce_mean((tf.squeeze(Q) - target) ** 2)
-
     # Train ops for q
     q_optimizer = tf.train.AdamOptimizer(learning_rate=q_lr)
     train_q_op = q_optimizer.minimize(q_loss, var_list=get_vars('main'))
@@ -225,8 +222,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         # TODO: Change to update per step
         if True:
             """
-            Perform all NAF updates at the end of the trajectory,
-            in accordance with tuning done by TD3 paper authors.
+            Perform all NAF updates.
             """
             for iteration in range(update_repeat):
                 batch = replay_buffer.sample_batch(batch_size)
@@ -241,9 +237,10 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
                 # 1. Calculate value function
                 value = sess.run(V_targ, feed_dict=feed_dict)
-                # TODO: Formulate in tensorflow?
+                # TODO: Formulate in Tensorflow?
                 # 2. Calculate target value according to Bellman
                 target_value = gamma * np.squeeze(value) + np.array(batch['rews'])
+                # 3. Feed into Tensorflow
                 outs = sess.run([train_q_op, q_loss, Q, V, A, target_update],
                                 {target: target_value,
                                  x_ph: batch['obs1'],

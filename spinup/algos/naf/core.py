@@ -23,7 +23,7 @@ def count_vars(scope):
 """
 Normalize Advantage Function
 """
-def mlp_normalized_advantage_function(x, a, hidden_sizes=(400,300), activation=tf.nn.relu,
+def mlp_normalized_advantage_function(x, a, hidden_sizes=(200,100), activation=tf.nn.relu,
                      output_activation=tf.tanh, action_space=None):
     act_dim = a.shape.as_list()[-1]
     act_limit = action_space.high[0]

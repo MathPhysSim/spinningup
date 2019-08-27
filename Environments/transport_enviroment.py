@@ -75,12 +75,6 @@ class transportENV(gym.Env):
 
         self.seed(888)
 
-    def execute(self, action):
-        if self.visualize:
-            # self.visualize()
-            pass
-        state, reward, terminal, _ = self.step(action)
-        return OpenAIGym.flatten_state(state=state), terminal, reward
 
     def step(self, action):
         """

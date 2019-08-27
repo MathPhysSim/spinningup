@@ -25,9 +25,12 @@ env_fn = lambda: env
 #     eg.add('ac_kwargs:hidden_sizes', [(400, 300)], 'hid')
 #     eg.add('ac_kwargs:activation', [tf.nn.relu], '')
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
-output_dir = 'logging/test'
-logger_kwargs = dict(output_dir=output_dir, exp_name='ppo twiss')
-agent = ppo(env_fn=env_fn, epochs=100, steps_per_epoch=10000, logger_kwargs=logger_kwargs)
+
+
+output_dir = 'logging/TD3'
+logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
+agent = td3(env_fn=env_fn, epochs=15, steps_per_epoch=1000, logger_kwargs=logger_kwargs, polyak=0.9999,
+            batch_size=50, gamma=0.9999, q_lr=1e-4, start_steps=500)
 
 
 plot_name = 'Stats'
