@@ -33,7 +33,7 @@ env_fn = lambda: env
 
 output_dir = 'logging/new_environment/naf/'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = naf(env_fn=env_fn, epochs=40, steps_per_epoch=5000, logger_kwargs=logger_kwargs,
+agent = naf(env_fn=env_fn, epochs=50, steps_per_epoch=500, logger_kwargs=logger_kwargs,
             gamma=0.99)
 
 
