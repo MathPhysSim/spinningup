@@ -64,7 +64,7 @@ class transportENV(gym.Env):
         # Store what the agent tried
         self.curr_episode = -1
         self.action_episode_memory = []
-        self.OFFSET = 6
+        # self.OFFSET = 6
 
         self.beam_pos = 0.0
         self.intensity_on_target = [0.0, 0.0]
@@ -76,6 +76,7 @@ class transportENV(gym.Env):
         self.states = []
 
         self.naf_flag = False
+        self.test_flag = False
 
     def seed(self, seed):
         np.random.seed(seed)
@@ -138,15 +139,16 @@ class transportENV(gym.Env):
         # else:
         #     reward-=.5
         throw_away = time_is_over
-        self.rewards[self.curr_episode].append(reward)
-        self.states_1[self.curr_episode].append(state[0])
-        self.states_2[self.curr_episode].append(state[1])
-        self.actions[self.curr_episode].append(action)
-        self.states[self.curr_episode].append(state)
+
         if throw_away:
             self.is_finalized = True  # abuse this a bit
-
-        self.total_counter += 1
+        if not(self.test_flag):
+            self.total_counter += 1
+            self.rewards[self.curr_episode].append(reward)
+            self.states_1[self.curr_episode].append(state[0])
+            self.states_2[self.curr_episode].append(state[1])
+            self.actions[self.curr_episode].append(action)
+            self.states[self.curr_episode].append(state)
         return state, reward
 
     def _get_reward(self, beam_pos):
@@ -170,13 +172,13 @@ class transportENV(gym.Env):
         -------
         observation (object): the initial observation of the space.
         """
-        nr_plot = 50
-        if not (self.curr_episode % nr_plot) and self.curr_episode > 0 and False:
-            fig, ax = plt.subplots()
-            for data in self.action_episode_memory[self.curr_episode - nr_plot:self.curr_episode]:
-                if len(data) > 5:
-                    ax.plot(data)
-            plt.show()
+        # nr_plot = 50
+        # if not (self.curr_episode % nr_plot) and self.curr_episode > 0 and False:
+        #     fig, ax = plt.subplots()
+        #     for data in self.action_episode_memory[self.curr_episode - nr_plot:self.curr_episode]:
+        #         if len(data) > 5:
+        #             ax.plot(data)
+        #     plt.show()
 
         self.curr_episode += 1
 

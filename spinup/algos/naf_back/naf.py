@@ -5,7 +5,6 @@ import time
 from spinup.algos.naf import core
 from spinup.algos.naf.core import get_vars
 from spinup.utils.logx import EpochLogger
-from spinup.algos.naf_temp.network import Network
 
 
 class ReplayBuffer:
@@ -178,41 +177,10 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         print(v_main, v_targ)
 
     sess = tf.Session()
-    # sess.run(tf.global_variables_initializer())
+    sess.run(tf.global_variables_initializer())
     # tf.initialize_all_variables().run(session=sess)
-    # networks
-    shared_args = {
-        'sess': sess,
-        'input_shape': env.observation_space.shape,
-        'action_size': env.action_space.shape[0],
-        'hidden_dims': [100, 100],
-        'use_batch_norm': False,
-        'use_seperate_networks': False,
-        'hidden_w': tf.random_uniform_initializer(-0.05, 0.05), 'action_w': tf.random_uniform_initializer(-0.05, 0.05),
-        'hidden_fn': tf.tanh, 'action_fn': tf.tanh,
-        'w_reg': None,
-    }
-
-    pred_network = Network(
-        scope='pred_network', **shared_args
-    )
-
-    target_network = Network(
-        scope='target_network', **shared_args
-    )
-
-
-    target_network.make_soft_update_from(pred_network, 0.001)
-
-
-    with tf.name_scope('optimizer1'):
-        target_y1 = tf.placeholder(tf.float32, [None])
-        loss = tf.reduce_mean(tf.squared_difference(target_y1, tf.squeeze(pred_network.Q)))
-        optimizer = tf.train.AdamOptimizer(learning_rate=q_lr).minimize(loss)
-
-    tf.initialize_all_variables().run(session=sess)
-    target_network.hard_copy_from(pred_network)
     sess.run(target_init)
+
     # Setup model saving
     logger.setup_tf_saver(sess, inputs={'x': x_ph, 'a': a_ph},
                           outputs={'mu': mu_pred, 'V': V_pred, 'Q': Q_pred, 'P': P_pred, 'A': A_pred})
@@ -220,16 +188,11 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     # TODO: change scaling back
     def get_action(o, noise_scale):
         a = sess.run(mu_pred, feed_dict={x_ph: o.reshape(1, -1)})[0]
-        #--------------------------------
-        # a = pred_network.predict([o])[0]
-        # --------------------------------
         value = a + noise_scale * np.random.randn(act_dim)
-        value = 1e-3 * value
-        act_limit = 1
+        value = 1e-3*value
         return np.clip(value, -act_limit, act_limit)
 
     def test_agent(n=10):
-        test_env.test_flag = True
         for j in range(n):
             o, r, d, ep_ret, ep_len = test_env.reset(), 0, False, 0, 0
             while not (d or (ep_len == max_ep_len)):
@@ -238,7 +201,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
                 ep_ret += r
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
-        test_env.test_flag = False
+
     start_time = time.time()
     o, r, d, ep_ret, ep_len, ep_nr = env.reset(), 0, False, 0, 0, 0
     total_steps = steps_per_epoch * epochs
@@ -251,7 +214,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         from a uniform distribution for better exploration. Afterwards, 
         use the learned policy (with some noise, via act_noise). 
         """
-        # TODO: Same noise as old agent
+        #TODO: Same noise as old agent
         # if t > start_steps:
         act_noise = act_noise * 1 / (ep_nr * 0.25 + 1)
         a = get_action(o, act_noise)
@@ -264,7 +227,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         # Ignore the "done" signal if it comes from hitting the time
         # horizon (that is, when it's an artificial terminal signal
         # that isn't based on the agent's state)
-        d = False if ep_len == max_ep_len else d
+        # d = False if ep_len == max_ep_len else d
 
         # Store experience to replay buffer
         replay_buffer.store(o, a, r, o2, d)
@@ -288,69 +251,54 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
                 # 1. Calculate value function
                 v = sess.run(V_targ, feed_dict={x2_ph: batch['obs2'],
-                                                a_ph: batch['acts']})
+                                                    a_ph: batch['acts']})
 
                 # TODO: Formulate in Tensorflow?
                 # 2. Calculate target value according to Bellman
                 target_values = gamma * np.squeeze(v) + np.array(batch['rews'])
 
                 # 3. Feed into Tensorflow
-                outs = sess.run([q_optim, q_loss, Q_pred, V_pred, A_pred ],
+                outs = sess.run([q_optim,  Q_pred, V_pred, A_pred, q_loss,],
                                 {target_y: target_values,
                                  x_ph: batch['obs1'],
                                  a_ph: batch['acts']
                                  })
                 logger.store(LossQ=outs[4], QVals=outs[2])
 
+                q_list.extend(outs[1])
+                v_list.extend(outs[2])
+                a_list.extend(outs[3])
+                l_list.append(outs[4])
+
                 sess.run(target_update)
 
-                v = target_network.predict_v(np.array(batch['obs2']), np.array(batch['acts']))
 
-                target_values1 = gamma * np.squeeze(v) + np.array(batch['rews'])
-
-                _, l, q, v, a = sess.run([
-                    optimizer, loss,
-                    pred_network.Q, pred_network.V, pred_network.A,
-                ], {
-                    target_y1: target_values1,
-                    pred_network.x: np.array(batch['obs1']),
-                    pred_network.u: np.array(batch['acts']),
-                    pred_network.is_train: True,
-                })
-
-                q_list.extend(q)
-                v_list.extend(v)
-                a_list.extend(a)
-                l_list.append(l)
-
-                target_network.soft_update_from(pred_network)
 
         if d or (ep_len == max_ep_len):
             print("t: %s, q: %s, v: %s, a: %s, l: %s" \
-                  % (t, np.mean(q_list), np.mean(v_list), np.mean(a_list), np.mean(l_list)))
-
+                      % (t, np.mean(q_list), np.mean(v_list), np.mean(a_list), np.mean(l_list)))
+            # if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
-            if d:
-                o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
-                ep_nr += 1
+            o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+            ep_nr += 1
 
         # End of epoch wrap-up
         if t > 0 and t % steps_per_epoch == 0:
             epoch = t // steps_per_epoch
 
             # Save model
-            # if (epoch % save_freq == 0) or (epoch == epochs - 1):
-            #     logger.save_state({'env': env}, None)
+            if (epoch % save_freq == 0) or (epoch == epochs - 1):
+                logger.save_state({'env': env}, None)
 
             # Test the performance of the deterministic version of the agent.
-            # test_agent()
+            test_agent()
 
             # Log info about epoch
             logger.log_tabular('Epoch', epoch)
             logger.log_tabular('EpRet', with_min_and_max=True)
-            # logger.log_tabular('TestEpRet', with_min_and_max=True)
+            logger.log_tabular('TestEpRet', with_min_and_max=True)
             logger.log_tabular('EpLen', average_only=True)
-            # logger.log_tabular('TestEpLen', average_only=True)
+            logger.log_tabular('TestEpLen', average_only=True)
             logger.log_tabular('TotalEnvInteracts', t)
             logger.log_tabular('QVals', with_min_and_max=True)
             logger.log_tabular('LossQ', average_only=True)

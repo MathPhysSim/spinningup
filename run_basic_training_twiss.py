@@ -1,7 +1,7 @@
 import gym
 
 from spinup.algos.sac.sac import sac
-
+import PyQt5
 import Environments.transportEnvOld as transport
 import tensorflow as tf
 from spinup.algos.ddpg.ddpg import ddpg
@@ -10,7 +10,9 @@ from spinup.algos.td3.td3 import td3
 from spinup.utils.run_utils import ExperimentGrid
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import matplotlib
+# matplotlib.use("Qt5Agg")
+import numpy as np
 from spinup.algos.naf.naf import naf
 
 env = transport.transportENV()
@@ -36,7 +38,7 @@ nafnet_kwargs = dict(hidden_sizes=[100, 100], activation=tf.tanh,
 
 output_dir = 'logging/new_environment/naf/'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = naf(env_fn=env_fn, epochs=20, steps_per_epoch=200, logger_kwargs=logger_kwargs,
+agent = naf(env_fn=env_fn, epochs=10, steps_per_epoch=200, logger_kwargs=logger_kwargs,
             nafnet_kwargs=nafnet_kwargs, act_noise=1, gamma=0.999, start_steps=1e2,
             batch_size=10, q_lr=1e-3, update_repeat=5, polyak=0.999, seed=456)
 
@@ -52,6 +54,75 @@ data_plot.plot(secondary_y=['MinEpRet', 'AverageEpRet'])
 plt.title(name)
 # plt.savefig(name + '.pdf')
 plt.show()
+
+# plotting
+print('now plotting')
+rewards = env.rewards
+states_1 = env.states_1
+states_2 = env.states_2
+
+iterations = []
+finals = []
+max_1 = []
+max_2 = []
+min_1 = []
+min_2 = []
+init_state_1 = []
+init_state_2 = []
+
+for i in range(len(rewards)):
+    iterations.append(len(rewards[i]))
+    if (len(states_1[i]) > 0):
+        max_1.append(np.amax(states_1[i]))
+        min_1.append(np.amin(states_1[i]))
+    else:
+        max_1.append(0.0)
+        min_1.append(0.0)
+    if (len(states_2[i]) > 0):
+        max_2.append(np.amax(states_2[i]))
+        min_2.append(np.amin(states_2[i]))
+    else:
+        max_2.append(0.0)
+        min_2.append(0.0)
+
+    if (len(rewards[i]) > 0):
+        finals.append(rewards[i][len(rewards[i]) - 1])
+        init_state_1.append(states_1[i][0])
+        init_state_2.append(states_2[i][0])
+    else:
+        finals.append(0.0)
+        init_state_1.append(0.0)
+        init_state_2.append(0.0)
+
+plot_suffix = ', number of iterations: ' + str(env.total_counter)
+
+plt.figure(1)
+plt.subplot(311)
+plt.ylim()
+plt.plot(iterations)
+plt.title('Iterations' + plot_suffix)
+
+plt.subplot(312)
+plt.plot(finals, 'r--')
+plt.ylim(0, 1)
+plt.title('Reward' + plot_suffix)
+
+plt.subplot(313)
+plt.plot(max_1, 'g--')
+plt.plot(min_1, 'r--')
+plt.plot(max_2, 'g-')
+plt.plot(min_2, 'r-')
+# plt.ylim(-1, 1)
+plt.title("positions" + plot_suffix)
+
+
+plt.figure(2)
+plt.title("Coverage" + plot_suffix)
+# plt.subplot(414)
+plt.scatter(init_state_1, init_state_2, s=80, c=finals, marker='o')
+plt.tight_layout()
+plt.show()
+print(init_state_1, init_state_2)
 
 # env, get_action = load_policy('path/logging1')
 
