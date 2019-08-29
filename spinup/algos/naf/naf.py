@@ -42,11 +42,11 @@ class ReplayBuffer:
 
 Normalized Advantage Function (NAF)
 
-Some commende on the NAF implementation:
+Some comments on the current NAF implementation:
 
 Missing functionality: 
 - [ ] Separate networks
-- [ ] batch_norm
+- [ ] Batch norm
 - [ ] Regularization
 
 Changed functionality:
@@ -56,7 +56,7 @@ Changed functionality:
 """
 
 
-def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_function, ac_kwargs=dict(), seed=0,
+def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_function, nafnet_kwargs=dict(), seed=0,
         steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.999,
         polyak=0.9995, q_lr=1e-4, batch_size=100, start_steps=500, update_repeat=5,
         act_noise=0.001, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
@@ -137,37 +137,35 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     act_limit = env.action_space.high[0]
 
     # Share information about action space with policy architecture
-    ac_kwargs['action_space'] = env.action_space
+    nafnet_kwargs['action_space'] = env.action_space
 
     # Inputs to computation graph
-    x_ph, a_ph, x2_ph, r_ph, d_ph, target = core.placeholders(obs_dim, act_dim, obs_dim, None, None, None)
+    x_ph, a_ph, x2_ph, target_y = core.placeholders(obs_dim, act_dim, obs_dim, None)
 
     # Main outputs from computation graph
     with tf.variable_scope('main'):
-        mu, V, Q, P, A = normalized_advantage_function(x_ph, a_ph, **ac_kwargs)
+        print('generate main network')
+        mu_pred, V_pred, Q_pred, P_pred, A_pred = normalized_advantage_function(x_ph, a_ph, **nafnet_kwargs)
     # Target networks
     with tf.variable_scope('target'):
-        # Note that the action placeholder going to actor_critic here is
-        # irrelevant, because we only need q_targ(s, pi_targ(s)).
-        mu_targ, V_targ, Q_targ, P_targ, A_targ = normalized_advantage_function(x2_ph, a_ph, **ac_kwargs)
+        print('generate target network')
+        mu_targ, V_targ, Q_targ, P_targ, A_targ = normalized_advantage_function(x2_ph, a_ph, **nafnet_kwargs)
 
     # Experience buffer
     replay_buffer = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, size=replay_size)
 
     # Count variables
-    var_counts = tuple(core.count_vars(scope) for scope in ['main/value', 'main/advantage', 'main'])
-    print('\nNumber of parameters: \t value: %d, \t advantage: %d, \t total: %d\n' % var_counts)
+    var_counts = tuple(core.count_vars(scope) for scope in ['target', 'main'])
+    print('\nNumber of parameters: \t target: %d, \t total: %d\n' % var_counts)
 
-    sess = tf.Session()
-    # Bellman backup for Q function
+    with tf.name_scope('optimizer'):
+        # NAF losses
+        q_loss = tf.reduce_mean(tf.squared_difference(tf.squeeze(Q_pred), target_y))
+        # Train ops for q
+        # q_optim = tf.train.AdamOptimizer(learning_rate=q_lr).minimize(q_loss, var_list=get_vars('main'))
+        q_optim = tf.train.AdamOptimizer(learning_rate=q_lr).minimize(q_loss)
 
-    # NAF losses
-    q_loss = tf.reduce_mean((tf.squeeze(Q) - target) ** 2)
-    # Train ops for q
-    q_optimizer = tf.train.AdamOptimizer(learning_rate=q_lr)
-    train_q_op = q_optimizer.minimize(q_loss, var_list=get_vars('main'))
-
-    # Polyak averaging for target variables
+    # Polyak averaging for target variables (previous soft update)
     target_update = tf.group([tf.assign(v_targ, polyak * v_targ + (1 - polyak) * v_main)
                               for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
@@ -175,16 +173,24 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     target_init = tf.group([tf.assign(v_targ, v_main)
                             for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
+    for v_main, v_targ in (zip(get_vars('main'), get_vars('target'))):
+        print(v_main, v_targ)
+
+    sess = tf.Session()
     sess.run(tf.global_variables_initializer())
+    # tf.initialize_all_variables().run(session=sess)
     sess.run(target_init)
 
     # Setup model saving
-    logger.setup_tf_saver(sess, inputs={'x': x_ph, 'a': a_ph}, outputs={'mu': mu, 'V': V, 'Q': Q, 'P': P, 'A': A})
+    logger.setup_tf_saver(sess, inputs={'x': x_ph, 'a': a_ph},
+                          outputs={'mu': mu_pred, 'V': V_pred, 'Q': Q_pred, 'P': P_pred, 'A': A_pred})
 
+    # TODO: change scaling back
     def get_action(o, noise_scale):
-        a = sess.run(mu, feed_dict={x_ph: o.reshape(1, -1)})[0]
-        a += noise_scale * np.random.randn(act_dim)
-        return np.clip(a, -act_limit, act_limit)
+        a = sess.run(mu_pred, feed_dict={x_ph: o.reshape(1, -1)})[0]
+        value = a + noise_scale * np.random.randn(act_dim)
+        value = 1e-3*value
+        return np.clip(value, -act_limit, act_limit)
 
     def test_agent(n=10):
         for j in range(n):
@@ -197,7 +203,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
 
     start_time = time.time()
-    o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+    o, r, d, ep_ret, ep_len, ep_nr = env.reset(), 0, False, 0, 0, 0
     total_steps = steps_per_epoch * epochs
 
     # Main loop: collect experience in env and update/log each epoch
@@ -208,10 +214,10 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         from a uniform distribution for better exploration. Afterwards, 
         use the learned policy (with some noise, via act_noise). 
         """
-        if t > start_steps:
-            a = get_action(o, act_noise)
-        else:
-            a = env.action_space.sample()
+        #TODO: Same noise as old agent
+        # if t > start_steps:
+        act_noise = act_noise * 1 / (ep_nr * 0.25 + 1)
+        a = get_action(o, act_noise)
 
         # Step the env
         o2, r, d, _ = env.step(a)
@@ -221,7 +227,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         # Ignore the "done" signal if it comes from hitting the time
         # horizon (that is, when it's an artificial terminal signal
         # that isn't based on the agent's state)
-        d = False if ep_len == max_ep_len else d
+        # d = False if ep_len == max_ep_len else d
 
         # Store experience to replay buffer
         replay_buffer.store(o, a, r, o2, d)
@@ -235,35 +241,46 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
             """
             Perform all NAF updates.
             """
+            q_list = []
+            v_list = []
+            a_list = []
+            l_list = []
             for iteration in range(update_repeat):
                 batch = replay_buffer.sample_batch(batch_size)
-                feed_dict = {x_ph: batch['obs1'],
-                             x2_ph: batch['obs2'],
-                             a_ph: batch['acts'],
-                             r_ph: batch['rews'],
-                             d_ph: batch['done']
-                             }
-
                 # Q-learning update
 
                 # 1. Calculate value function
-                value = sess.run(V_targ, feed_dict={x2_ph: batch['obs2'],
+                v = sess.run(V_targ, feed_dict={x2_ph: batch['obs2'],
                                                     a_ph: batch['acts']})
+
                 # TODO: Formulate in Tensorflow?
                 # 2. Calculate target value according to Bellman
-                target_value = gamma * np.squeeze(value) + np.array(batch['rews'])
+                target_values = gamma * np.squeeze(v) + np.array(batch['rews'])
+
                 # 3. Feed into Tensorflow
-                outs = sess.run([train_q_op, q_loss, Q, V, A, target_update],
-                                {target: target_value,
+                outs = sess.run([q_optim,  Q_pred, V_pred, A_pred, q_loss,],
+                                {target_y: target_values,
                                  x_ph: batch['obs1'],
-                                 a_ph: batch['acts'],
-                                 d_ph: batch['done']
+                                 a_ph: batch['acts']
                                  })
-                logger.store(LossQ=outs[1], QVals=outs[2])
+                logger.store(LossQ=outs[4], QVals=outs[2])
+
+                q_list.extend(outs[1])
+                v_list.extend(outs[2])
+                a_list.extend(outs[3])
+                l_list.append(outs[4])
+
+                sess.run(target_update)
+
+
 
         if d or (ep_len == max_ep_len):
+            print("t: %s, q: %s, v: %s, a: %s, l: %s" \
+                      % (t, np.mean(q_list), np.mean(v_list), np.mean(a_list), np.mean(l_list)))
+            # if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+            ep_nr += 1
 
         # End of epoch wrap-up
         if t > 0 and t % steps_per_epoch == 0:
@@ -307,6 +324,6 @@ if __name__ == '__main__':
     logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
 
     naf(lambda: gym.make(args.env), normalized_advantage_function=core.mlp_actor_critic,
-        ac_kwargs=dict(hidden_sizes=[args.hid] * args.l),
+        nafnet_kwargs=dict(hidden_sizes=[args.hid] * args.l),
         gamma=args.gamma, seed=args.seed, epochs=args.epochs,
         logger_kwargs=logger_kwargs)

@@ -45,7 +45,7 @@ class transportENV(gym.Env):
         # Define what the agent can do
         # Increase, decrease and wait
         # self.action_space = spaces.Discrete(3)
-        self.MAX_POS = 1e-3
+        self.MAX_POS = 1.
         low = np.array([-self.MAX_POS, -self.MAX_POS])
         high = np.array([self.MAX_POS, self.MAX_POS])
         self.action_space = spaces.Box(low=low, high=high)
@@ -74,6 +74,8 @@ class transportENV(gym.Env):
         self.states_2 = []
         self.actions = []
         self.states = []
+
+        self.naf_flag = False
 
     def seed(self, seed):
         np.random.seed(seed)
@@ -114,7 +116,8 @@ class transportENV(gym.Env):
         return np.array(state), reward, self.is_finalized, {}
 
     def _take_action(self, action):
-        # action *= 1e-3
+        # if not(self.naf_flag):
+        #     action = 5e-4 * action
 
         mssb_delta, mbb_delta = action
 

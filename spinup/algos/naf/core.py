@@ -3,44 +3,62 @@ import tensorflow as tf
 
 
 def placeholder(dim=None):
-    return tf.placeholder(dtype=tf.float32, shape=(None,dim) if dim else (None,))
+    return tf.placeholder(dtype=tf.float32, shape=(None, dim) if dim else (None,))
 
 def placeholders(*args):
     return [placeholder(dim) for dim in args]
 
-def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
-    for h in hidden_sizes[:-1]:
-        x = tf.layers.dense(x, units=h, activation=activation)
-    return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
+
+def mpl_inner(x, num_outputs, activation_fn, weights_initializer, biases_initializer, scope):
+    return tf.contrib.layers.fully_connected(x, num_outputs=num_outputs, activation_fn=activation_fn,
+                                                 weights_initializer=weights_initializer,
+                                                 biases_initializer=biases_initializer, scope=scope)
+
+
+def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=tf.tanh, weight_init=None, scope='mpl'):
+    for idx, h in enumerate(hidden_sizes[:-1]):
+        x = mpl_inner(x, num_outputs=int(h), activation_fn=activation,weights_initializer=weight_init,
+                      biases_initializer=tf.constant_initializer(0.0), scope=scope + '%d' % idx)
+    if len(hidden_sizes) > 1:
+        idx += 1
+        scope = scope + '%d' % idx
+    return mpl_inner(x, num_outputs=int(hidden_sizes[-1]), activation_fn=output_activation,
+                     weights_initializer=weight_init,
+                     biases_initializer=tf.constant_initializer(0.0), scope=scope)
+
 
 def get_vars(scope):
     return [x for x in tf.global_variables() if scope in x.name]
+
 
 def count_vars(scope):
     v = get_vars(scope)
     return sum([np.prod(var.shape.as_list()) for var in v])
 
+
 """
 Normalize Advantage Function
 """
-def mlp_normalized_advantage_function(x, a, hidden_sizes=(200,100), activation=tf.nn.relu,
-                     output_activation=tf.tanh, action_space=None):
+
+
+def mlp_normalized_advantage_function(x, a, hidden_sizes=(100, 100), activation=tf.tanh,
+                                      output_activation=tf.tanh, action_space=None, weight_init=None):
     act_dim = a.shape.as_list()[-1]
     act_limit = action_space.high[0]
 
     # create a shared network for the variables
-    hid_outs ={}
+    hid_outs = {}
     # TODO: Check the availability of the variables in the scope
-    with tf.variable_scope('hidden'):
-        h = mlp(x, list(hidden_sizes), activation, output_activation)
+    with tf.name_scope('hidden'):
+        h = mlp(x, list(hidden_sizes), activation, output_activation, weight_init, scope='hid')
         hid_outs['v'], hid_outs['l'], hid_outs['mu'] = h, h, h
 
-    with tf.variable_scope('value'):
-        V = mlp(hid_outs['v'], [1])
+    with tf.name_scope('value'):
+        V = mlp(hid_outs['v'], [1], activation, output_activation, weight_init, scope='V')
 
-    with tf.variable_scope('advantage'):
-        l = mlp(hid_outs['l'], [(act_dim * (act_dim + 1)) / 2])
-        mu = act_limit*mlp( hid_outs['mu'], [act_dim], activation=activation, output_activation=output_activation)
+    with tf.name_scope('advantage'):
+        l = mlp(hid_outs['l'], [(act_dim * (act_dim + 1)) / 2], activation, output_activation, weight_init, scope='l')
+        mu = act_limit * mlp(hid_outs['mu'], [act_dim], activation, output_activation, weight_init, scope='mu')
         pivot = 0
         rows = []
         for idx in range(act_dim):
@@ -57,7 +75,7 @@ def mlp_normalized_advantage_function(x, a, hidden_sizes=(200,100), activation=t
         A = -tf.matmul(tf.transpose(tmp, [0, 2, 1]), tf.matmul(P, tmp)) / 2
         A = tf.reshape(A, [-1, 1])
 
-    with tf.variable_scope('Q'):
+    with tf.name_scope('Q'):
         Q = A + V
 
     return mu, V, Q, P, A

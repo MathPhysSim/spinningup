@@ -14,9 +14,10 @@ import matplotlib.pyplot as plt
 from spinup.algos.naf.naf import naf
 
 env = transport.transportENV()
+env_fn = lambda: env
 # env_fn = lambda : gym.make('Pendulum-v0')
 
-env_fn = lambda: env
+
 
 # if __name__ == '__main__':
 #
@@ -30,11 +31,14 @@ env_fn = lambda: env
 #     eg.add('ac_kwargs:activation', [tf.nn.relu], '')
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
 
+nafnet_kwargs = dict(hidden_sizes=[100, 100], activation=tf.tanh,
+                     weight_init=tf.random_uniform_initializer(-0.05, 0.05))
 
 output_dir = 'logging/new_environment/naf/'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = naf(env_fn=env_fn, epochs=50, steps_per_epoch=500, logger_kwargs=logger_kwargs,
-            gamma=0.99)
+agent = naf(env_fn=env_fn, epochs=20, steps_per_epoch=200, logger_kwargs=logger_kwargs,
+            nafnet_kwargs=nafnet_kwargs, act_noise=1, gamma=0.999, start_steps=1e2,
+            batch_size=10, q_lr=1e-3, update_repeat=5, polyak=0.999, seed=456)
 
 
 plot_name = 'Stats'
