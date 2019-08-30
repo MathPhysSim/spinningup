@@ -38,22 +38,22 @@ nafnet_kwargs = dict(hidden_sizes=[100, 100], activation=tf.tanh,
 
 output_dir = 'logging/new_environment/naf/'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = naf(env_fn=env_fn, epochs=10, steps_per_epoch=200, logger_kwargs=logger_kwargs,
+agent = naf(env_fn=env_fn, epochs=50, steps_per_epoch=100, logger_kwargs=logger_kwargs,
             nafnet_kwargs=nafnet_kwargs, act_noise=1, gamma=0.999, start_steps=1e2,
             batch_size=10, q_lr=1e-3, update_repeat=5, polyak=0.999, seed=456)
 
 
-plot_name = 'Stats'
-name = plot_name
-data = pd.read_csv(output_dir+'/progress.txt', sep="\t")
-
-data.index = data['TotalEnvInteracts']
-data_plot= data[['EpLen', 'MinEpRet', 'AverageEpRet']]
-data_plot.plot(secondary_y=['MinEpRet', 'AverageEpRet'])
-
-plt.title(name)
-# plt.savefig(name + '.pdf')
-plt.show()
+# plot_name = 'Stats'
+# name = plot_name
+# data = pd.read_csv(output_dir+'/progress.txt', sep="\t")
+#
+# data.index = data['TotalEnvInteracts']
+# data_plot= data[['EpLen', 'MinEpRet', 'AverageEpRet']]
+# data_plot.plot(secondary_y=['MinEpRet', 'AverageEpRet'])
+#
+# plt.title(name)
+# # plt.savefig(name + '.pdf')
+# plt.show()
 
 # plotting
 print('now plotting')
@@ -69,6 +69,8 @@ min_1 = []
 min_2 = []
 init_state_1 = []
 init_state_2 = []
+
+init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
 
 for i in range(len(rewards)):
     iterations.append(len(rewards[i]))
@@ -87,8 +89,10 @@ for i in range(len(rewards)):
 
     if (len(rewards[i]) > 0):
         finals.append(rewards[i][len(rewards[i]) - 1])
-        init_state_1.append(states_1[i][0])
-        init_state_2.append(states_2[i][0])
+        init_state_1.append(init_states.iloc[i, 0])
+        init_state_2.append(init_states.iloc[i, 1])
+        # init_state_1.append(states_1[i][0])
+        # init_state_2.append(states_2[i][0])
     else:
         finals.append(0.0)
         init_state_1.append(0.0)
@@ -112,7 +116,7 @@ plt.plot(max_1, 'g--')
 plt.plot(min_1, 'r--')
 plt.plot(max_2, 'g-')
 plt.plot(min_2, 'r-')
-# plt.ylim(-1, 1)
+plt.ylim(-.1, .1)
 plt.title("positions" + plot_suffix)
 
 

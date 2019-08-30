@@ -54,10 +54,10 @@ def mlp_normalized_advantage_function(x, a, hidden_sizes=(100, 100), activation=
         hid_outs['v'], hid_outs['l'], hid_outs['mu'] = h, h, h
 
     with tf.name_scope('value'):
-        V = mlp(hid_outs['v'], [1], activation, output_activation, weight_init, scope='V')
+        V = mlp(hid_outs['v'], [1], None, None, weight_init, scope='V')
 
     with tf.name_scope('advantage'):
-        l = mlp(hid_outs['l'], [(act_dim * (act_dim + 1)) / 2], activation, output_activation, weight_init, scope='l')
+        l = mlp(hid_outs['l'], [(act_dim * (act_dim + 1)) / 2], None, None, weight_init, scope='l')
         mu = act_limit * mlp(hid_outs['mu'], [act_dim], activation, output_activation, weight_init, scope='mu')
         pivot = 0
         rows = []

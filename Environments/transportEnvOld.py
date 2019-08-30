@@ -12,6 +12,7 @@ from math import pi, exp
 import math
 import random as rd
 import pickle
+import pandas as pd
 
 
 class transportENV(gym.Env):
@@ -135,6 +136,7 @@ class transportENV(gym.Env):
         state, reward = self._get_state_and_reward()
         if (self.intensity_on_target[0] > 0.8):  # or np.abs(self.beam_pos)>0.05):
             # print("shorter ", self.intensity_on_target[0], self.beam_pos, self.counter)
+            # reward = 20
             time_is_over = True
         # else:
         #     reward-=.5
@@ -142,7 +144,7 @@ class transportENV(gym.Env):
 
         if throw_away:
             self.is_finalized = True  # abuse this a bit
-        if not(self.test_flag):
+        if not (self.test_flag):
             self.total_counter += 1
             self.rewards[self.curr_episode].append(reward)
             self.states_1[self.curr_episode].append(state[0])
@@ -159,13 +161,13 @@ class transportENV(gym.Env):
         sigma = math.sqrt(self.target.beta * emittance)
         self.intensity_on_target = quad(
             lambda x: 1 / (sigma * (2 * pi) ** 0.5) * exp((x - beam_pos) ** 2 / (-2 * sigma ** 2)), -3 * sigma,
-            3 * sigma)
+                                                                                                    3 * sigma)
 
         reward = self.intensity_on_target[0]
 
         return reward
 
-    def reset(self):
+    def reset(self, init_state=[]):
         """
         Reset the state of the environment and returns an initial observation.
         Returns
@@ -192,10 +194,13 @@ class transportENV(gym.Env):
         self.x0 = 0.
         # print("beam_pos ", self.beam_pos)
         # print("intensity ", self.intensity_on_target)
-        self.mssb_angle = np.random.uniform(-0.002, 0.002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
-        self.mbb_angle = np.random.uniform(-0.002, 0.002, 1)[0]  # rd.uniform(-0.0005, 0.0005)
+        if len(init_state) == 0:
+            init_state = [-0.000701,  0.001419]#np.array(np.random.uniform(-0.002, 0.002, 2))
 
-        # print("initial: ", self.mssb_angle, self.mbb_angle)
+        self.mssb_angle = init_state[0]  # np.random.uniform(-0.002, 0.002, 1)[0]
+        self.mbb_angle = init_state[1]  # np.random.uniform(-0.002, 0.002, 1)[0]
+
+        print("initial: ", self.mssb_angle, self.mbb_angle)
 
         self.counter = 0
 

@@ -6,7 +6,8 @@ from spinup.algos.naf import core
 from spinup.algos.naf.core import get_vars
 from spinup.utils.logx import EpochLogger
 from spinup.algos.naf_temp.network import Network
-
+import pandas as pd
+import os
 
 class ReplayBuffer:
     """
@@ -31,7 +32,10 @@ class ReplayBuffer:
         self.size = min(self.size + 1, self.max_size)
 
     def sample_batch(self, batch_size=32):
-        idxs = np.random.randint(0, self.size, size=batch_size)
+        if self.size < batch_size:
+            idxs = np.arange(self.size)
+        else:
+            idxs = np.random.randint(0, self.size, size=batch_size)
         return dict(obs1=self.obs1_buf[idxs],
                     obs2=self.obs2_buf[idxs],
                     acts=self.acts_buf[idxs],
@@ -133,7 +137,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     env, test_env = env_fn(), env_fn()
     obs_dim = env.observation_space.shape[0]
     act_dim = env.action_space.shape[0]
-
+    init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
     # Action limit for clamping: critically, assumes all dimensions share the same bound!
     act_limit = env.action_space.high[0]
 
@@ -163,8 +167,8 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         # NAF losses
         q_loss = tf.reduce_mean(tf.squared_difference(tf.squeeze(Q_pred), target_y))
         # Train ops for q
-        # q_optim = tf.train.AdamOptimizer(learning_rate=q_lr).minimize(q_loss, var_list=get_vars('main'))
-        q_optim = tf.train.AdamOptimizer(learning_rate=q_lr).minimize(q_loss)
+        q_optim = tf.train.AdamOptimizer(learning_rate=q_lr).minimize(q_loss, var_list=get_vars('main'))
+        # q_optim = tf.train.AdamOptimizer(learning_rate=q_lr).minimize(q_loss)
 
     # Polyak averaging for target variables (previous soft update)
     target_update = tf.group([tf.assign(v_targ, polyak * v_targ + (1 - polyak) * v_main)
@@ -219,13 +223,13 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
     # TODO: change scaling back
     def get_action(o, noise_scale):
-        a = sess.run(mu_pred, feed_dict={x_ph: o.reshape(1, -1)})[0]
+        a= sess.run(mu_pred, feed_dict={x_ph: o.reshape(1, -1)})[0]
         #--------------------------------
         # a = pred_network.predict([o])[0]
         # --------------------------------
         value = a + noise_scale * np.random.randn(act_dim)
         value = 1e-3 * value
-        act_limit = 1
+        act_limit = .01
         return np.clip(value, -act_limit, act_limit)
 
     def test_agent(n=10):
@@ -239,8 +243,9 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
         test_env.test_flag = False
+
     start_time = time.time()
-    o, r, d, ep_ret, ep_len, ep_nr = env.reset(), 0, False, 0, 0, 0
+    o, r, d, ep_ret, ep_len, ep_nr = env.reset(init_states.iloc[0, :]), 0, False, 0, 0, 0
     total_steps = steps_per_epoch * epochs
 
     # Main loop: collect experience in env and update/log each epoch
@@ -253,7 +258,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         """
         # TODO: Same noise as old agent
         # if t > start_steps:
-        act_noise = act_noise * 1 / (ep_nr * 0.25 + 1)
+        act_noise =  1 / (ep_nr * 0.25 + 1)
         a = get_action(o, act_noise)
 
         # Step the env
@@ -264,7 +269,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         # Ignore the "done" signal if it comes from hitting the time
         # horizon (that is, when it's an artificial terminal signal
         # that isn't based on the agent's state)
-        d = False if ep_len == max_ep_len else d
+        # d = False if ep_len == max_ep_len else d
 
         # Store experience to replay buffer
         replay_buffer.store(o, a, r, o2, d)
@@ -293,7 +298,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
                 # TODO: Formulate in Tensorflow?
                 # 2. Calculate target value according to Bellman
                 target_values = gamma * np.squeeze(v) + np.array(batch['rews'])
-
+                target_temp = target_values
                 # 3. Feed into Tensorflow
                 outs = sess.run([q_optim, q_loss, Q_pred, V_pred, A_pred ],
                                 {target_y: target_values,
@@ -331,11 +336,14 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             if d:
-                o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
                 ep_nr += 1
+                o, r, d, ep_ret, ep_len = env.reset(init_states.iloc[ep_nr, :]), 0, False, 0, 0
+
+
 
         # End of epoch wrap-up
-        if t > 0 and t % steps_per_epoch == 0:
+        # if t > 0 and t % steps_per_epoch == 0:
+        if ep_nr >= 50:
             epoch = t // steps_per_epoch
 
             # Save model
@@ -356,6 +364,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
             logger.log_tabular('LossQ', average_only=True)
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
+            break
 
 
 if __name__ == '__main__':
