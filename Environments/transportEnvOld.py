@@ -1,30 +1,29 @@
 import logging.config
+import pickle
 import random
+import random as rd
 
 import gym
+import math
 import numpy as np
 # 3rd party modules
 from gym import spaces
-import matplotlib.pyplot as plt
-import Environments.twissElement as twiss
-from scipy.integrate import quad
 from math import pi, exp
-import math
-import random as rd
-import pickle
-import pandas as pd
+from scipy.integrate import quad
+
+import Environments.twissElement as twiss
 
 
 class transportENV(gym.Env):
     """
-    Define a simple Banana environment.
+    Define a simple transport environment.
     The environment defines which actions can be taken at which point and
     when the agent receives which reward.
     """
 
     def __init__(self):
         self.total_counter = 0
-        self.__version__ = "0.0.2"
+        self.__version__ = "0.0.5"
         logging.info("TransportEnv - Version {}".format(self.__version__))
 
         # General variables defining the environment
@@ -44,28 +43,23 @@ class transportENV(gym.Env):
         self.mbb_angle = self.mbb_angle_0
 
         # Define what the agent can do
-        # Increase, decrease and wait
-        # self.action_space = spaces.Discrete(3)
-        self.MAX_POS = 1.
+        self.MAX_POS = 1
         low = np.array([-self.MAX_POS, -self.MAX_POS])
         high = np.array([self.MAX_POS, self.MAX_POS])
         self.action_space = spaces.Box(low=low, high=high)
 
         # Observation is the position
-        self.MAX_POS = 1.
+        self.MAX_POS = 0.5
         low = np.array([-self.MAX_POS, -self.MAX_POS])
         high = np.array([self.MAX_POS, self.MAX_POS])
-        self.observation_space = spaces.Box(low, high)
+        self.observation_space = spaces.Box(low=low, high=high)
 
         self.counter = 0
         self.seed()
         self.viewer = None
         self.state = None
 
-        # Store what the agent tried
         self.curr_episode = -1
-        self.action_episode_memory = []
-        # self.OFFSET = 6
 
         self.beam_pos = 0.0
         self.intensity_on_target = [0.0, 0.0]
@@ -118,33 +112,24 @@ class transportENV(gym.Env):
         return np.array(state), reward, self.is_finalized, {}
 
     def _take_action(self, action):
-        # if not(self.naf_flag):
-        #     action = 5e-4 * action
-
-        mssb_delta, mbb_delta = action
-
-        self.action_episode_memory[self.curr_episode].append(action)
+        mssb_delta, mbb_delta = action * 1e-3
         self.mssb_angle += mssb_delta
         self.mbb_angle += mbb_delta
-        # print(self.mssb_angle,self.mbb_angle)
 
         self.counter += 1
         remaining_steps = self.MAX_TIME - self.counter
-        time_is_over = (remaining_steps <= 0)
+        episode_is_over = (remaining_steps <= 0)
 
         # print("just before check ",self.intensity_on_target[0])
         state, reward = self._get_state_and_reward()
-        if (self.intensity_on_target[0] > 0.8):  # or np.abs(self.beam_pos)>0.05):
-            # print("shorter ", self.intensity_on_target[0], self.beam_pos, self.counter)
-            # reward = 20
-            time_is_over = True
-        # else:
-        #     reward-=.5
-        throw_away = time_is_over
-
-        if throw_away:
+        if (self.intensity_on_target[0] > 0.8):
+            episode_is_over = True
+        else:
+            reward = (reward - 0.8)/100
+        if episode_is_over:
             self.is_finalized = True  # abuse this a bit
-        if not (self.test_flag):
+
+        if not self.test_flag:
             self.total_counter += 1
             self.rewards[self.curr_episode].append(reward)
             self.states_1[self.curr_episode].append(state[0])
@@ -154,17 +139,13 @@ class transportENV(gym.Env):
         return state, reward
 
     def _get_reward(self, beam_pos):
-        # print("beam_pos ", beam_pos)
-
         self.beam_pos = beam_pos
         emittance = 1.1725E-08
         sigma = math.sqrt(self.target.beta * emittance)
         self.intensity_on_target = quad(
-            lambda x: 1 / (sigma * (2 * pi) ** 0.5) * exp((x - beam_pos) ** 2 / (-2 * sigma ** 2)), -3 * sigma,
-                                                                                                    3 * sigma)
-
+            lambda x: 1 / (sigma * (2 * pi) ** 0.5) *
+                      exp((x - beam_pos) ** 2 / (-2 * sigma ** 2)), -3 * sigma, 3 * sigma)
         reward = self.intensity_on_target[0]
-
         return reward
 
     def reset(self, init_state=[]):
@@ -174,41 +155,26 @@ class transportENV(gym.Env):
         -------
         observation (object): the initial observation of the space.
         """
-        # nr_plot = 50
-        # if not (self.curr_episode % nr_plot) and self.curr_episode > 0 and False:
-        #     fig, ax = plt.subplots()
-        #     for data in self.action_episode_memory[self.curr_episode - nr_plot:self.curr_episode]:
-        #         if len(data) > 5:
-        #             ax.plot(data)
-        #     plt.show()
-
-        self.curr_episode += 1
-
-        self.action_episode_memory.append([])
-        self.rewards.append([])
-        self.states_1.append([])
-        self.states_2.append([])
-        self.actions.append([])
-        self.states.append([])
+        if not (self.test_flag):
+            self.curr_episode += 1
+            self.rewards.append([])
+            self.states_1.append([])
+            self.states_2.append([])
+            self.actions.append([])
+            self.states.append([])
         self.is_finalized = False
         self.x0 = 0.
-        # print("beam_pos ", self.beam_pos)
-        # print("intensity ", self.intensity_on_target)
+
         if len(init_state) == 0:
-            init_state = [-0.000701,  0.001419]#np.array(np.random.uniform(-0.002, 0.002, 2))
+            # [-0.000701,  0.001419]#
+            init_state = np.array(np.random.uniform(-0.001, 0.001, 2))
 
         self.mssb_angle = init_state[0]  # np.random.uniform(-0.002, 0.002, 1)[0]
         self.mbb_angle = init_state[1]  # np.random.uniform(-0.002, 0.002, 1)[0]
-
-        print("initial: ", self.mssb_angle, self.mbb_angle)
-
         self.counter = 0
-
         self.state, reward = self._get_state_and_reward()
-        state = self.state
-        # print("initial beam_pos: ", self.beam_pos, state[0], state[1])
-        # print("Observable", state, self.bhn10_value)
-        return np.array(state)
+        self.init_state = self.state
+        return np.array(self.state)
 
     def _get_state_and_reward(self):
         """Get the observation."""
@@ -231,16 +197,11 @@ class transportENV(gym.Env):
         bpm1_x += delta1
         bpm2_x += delta2
 
-        # state = [np.random.normal(bpm1_x,0.0001,1)[0],np.random.normal(bpm2_x,0.0001,1)[0]]
-        # print('random stuff ',bpm1_x,state[0])
-        # state = [bpm1_x+delta, bpm2_x+delta]
         state = [np.round(bpm1_x, 3, None), np.round(bpm2_x, 3, None)]
-        # state = [bpm1_x, bpm2_x]
         return state, reward
 
     def render(self, mode='human'):
-        clearance = 1
-        carheight = carwidth = 2
+        carheight = 2
         if self.viewer is None:
             from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(500, 500)
@@ -256,7 +217,6 @@ class transportENV(gym.Env):
 
             self.magnetic_trans = rendering.Transform()
             beam_pos = rendering.make_circle(carheight / 2.5)
-            # beam_pos.add_attr(rendering.Transform(translation=(-carwidth / 1, clearance)))
             beam_pos.add_attr(self.magnetic_trans)
             beam_pos.set_color(0, .9, .0)
             self.viewer.add_geom(beam_pos)
@@ -265,8 +225,6 @@ class transportENV(gym.Env):
             self.viewer.add_geom(axle)
         pos = self.state
         self.magnetic_trans.set_translation((pos), (0))
-        # self.pole_transform.set_rotation(self.state[0] + np.pi / 2)
-
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def seed(self, seed=None):

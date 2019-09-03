@@ -18,7 +18,7 @@ def load_policy(fpath, itr='last', deterministic=False):
     # load the things!
     sess = tf.Session()
     model = restore_tf_graph(sess, osp.join(fpath, 'simple_save'+itr))
-
+    print(model.keys())
     # get the correct op for executing actions
     if deterministic and 'mu' in model.keys():
         # 'deterministic' is only a valid option for SAC policies

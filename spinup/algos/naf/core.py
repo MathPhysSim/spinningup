@@ -42,9 +42,10 @@ Normalize Advantage Function
 
 
 def mlp_normalized_advantage_function(x, a, hidden_sizes=(100, 100), activation=tf.tanh,
-                                      output_activation=tf.tanh, action_space=None, weight_init=None):
+                                      output_activation=tf.tanh, action_space=None, weight_init=None,
+                                      act_multiplier=1):
     act_dim = a.shape.as_list()[-1]
-    act_limit = action_space.high[0]
+    act_limit = action_space.high[0] * act_multiplier
 
     # create a shared network for the variables
     hid_outs = {}
