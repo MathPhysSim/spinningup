@@ -21,7 +21,7 @@ class transportENV(gym.Env):
     when the agent receives which reward.
     """
 
-    def __init__(self):
+    def __init__(self,naf_flag=False):
         self.total_counter = 0
         self.__version__ = "0.0.5"
         logging.info("TransportEnv - Version {}".format(self.__version__))
@@ -70,7 +70,7 @@ class transportENV(gym.Env):
         self.actions = []
         self.states = []
 
-        self.naf_flag = False
+        self.naf_flag = naf_flag
         self.test_flag = False
 
     def seed(self, seed):
@@ -122,10 +122,16 @@ class transportENV(gym.Env):
 
         # print("just before check ",self.intensity_on_target[0])
         state, reward = self._get_state_and_reward()
-        if (self.intensity_on_target[0] > 0.8):
-            episode_is_over = True
+        if self.naf_flag:
+            if (self.intensity_on_target[0] > 0.8):
+                episode_is_over = True
+            else:
+                reward = (reward - 0.8)/100
         else:
-            reward = (reward - 0.8)/100
+            if (self.intensity_on_target[0] > 0.8):
+                episode_is_over = True
+            reward = (reward - 0.8)
+
         if episode_is_over:
             self.is_finalized = True  # abuse this a bit
 

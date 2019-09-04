@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from Environments.transportEnvOld import transportENV
 
-np.random.seed(888)
+np.random.seed(999)
 dataInit = pd.DataFrame()
 dataInit['states1'] = np.zeros(1000)
 dataInit['states2'] = np.zeros(1000)

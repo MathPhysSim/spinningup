@@ -37,8 +37,8 @@ ac_kwargs = dict(hidden_sizes=[100, 100])
 act_noise = 1
 output_dir = 'logging/new_environment/sac/test'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = sac(env_fn=env_fn, epochs=100, steps_per_epoch=1000, logger_kwargs=logger_kwargs,
-            gamma=0.999, seed=456)
+agent = sac(env_fn=env_fn, epochs=25, steps_per_epoch=1000, logger_kwargs=logger_kwargs,
+            gamma=0.999, seed=123, max_ep_len=15)
 
 plot_name = 'Stats'
 name = plot_name
@@ -67,7 +67,7 @@ min_2 = []
 init_state_1 = []
 init_state_2 = []
 
-init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
+# init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
 
 for i in range(len(rewards)):
     iterations.append(len(rewards[i]))

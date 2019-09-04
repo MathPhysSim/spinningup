@@ -137,7 +137,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
     env, test_env = env_fn(), env_fn()
     obs_dim = env.observation_space.shape[0]
     act_dim = env.action_space.shape[0]
-    init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
+    # init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
     # Action limit for clamping: critically, assumes all dimensions share the same bound!
     act_limit = env.action_space.high[0]
 
@@ -206,7 +206,8 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         test_env.test_flag = False
 
     start_time = time.time()
-    o, r, d, ep_ret, ep_len, ep_nr = env.reset(init_states.iloc[0, :]), 0, False, 0, 0, 0
+    # o, r, d, ep_ret, ep_len, ep_nr = env.reset(init_states.iloc[0, :]), 0, False, 0, 0, 0
+    o, r, d, ep_ret, ep_len, ep_nr = env.reset(), 0, False, 0, 0, 0
     total_steps = steps_per_epoch * epochs
 
     # Main loop: collect experience in env and update/log each epoch
@@ -271,7 +272,8 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             if d:
                 ep_nr += 1
-                o, r, d, ep_ret, ep_len = env.reset(init_states.iloc[ep_nr, :]), 0, False, 0, 0
+                # o, r, d, ep_ret, ep_len = env.reset(init_states.iloc[ep_nr, :]), 0, False, 0, 0
+                o, r, d, ep_ret, ep_len, ep_nr = env.reset(), 0, False, 0, 0, 0
 
         # End of epoch wrap-up
         if t > 0 and t % steps_per_epoch == 0:

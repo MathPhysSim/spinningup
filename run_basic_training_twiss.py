@@ -15,7 +15,7 @@ import matplotlib
 import numpy as np
 from spinup.algos.naf.naf import naf
 
-env = transport.transportENV()
+env = transport.transportENV(naf_flag=True)
 env_fn = lambda: env
 # env_fn = lambda : gym.make('Pendulum-v0')
 
@@ -34,12 +34,12 @@ env_fn = lambda: env
 
 nafnet_kwargs = dict(hidden_sizes=[100, 100], activation=tf.tanh
                      , weight_init=tf.random_uniform_initializer(-0.05, 0.05))
-act_noise = 0.01
+act_noise = .01
 output_dir = 'logging/new_environment/naf/test'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
 agent = naf(env_fn=env_fn, epochs=25, steps_per_epoch=100, logger_kwargs=logger_kwargs,
             nafnet_kwargs=nafnet_kwargs, act_noise=act_noise, gamma=0.999, start_steps=5000,
-            batch_size=100, q_lr=1e-3, update_repeat=50, polyak=0.995, seed=123)
+            batch_size=100, q_lr=1e-3, update_repeat=20, polyak=0.995, seed=123)
 
 plot_name = 'Stats'
 name = plot_name
@@ -68,7 +68,7 @@ min_2 = []
 init_state_1 = []
 init_state_2 = []
 
-init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
+# init_states = pd.read_pickle('/Users/shirlaen/PycharmProjects/DeepLearning/spinningup/Environments/initData')
 
 for i in range(len(rewards)):
     iterations.append(len(rewards[i]))
