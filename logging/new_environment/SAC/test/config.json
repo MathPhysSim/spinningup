@@ -1,0 +1,37 @@
+{
+    "ac_kwargs":	{},
+    "actor_critic":	"mlp_actor_critic",
+    "alpha":	0.2,
+    "batch_size":	100,
+    "env_fn":	"<function <lambda> at 0x10106a1e0>",
+    "epochs":	25,
+    "exp_name":	"twiss",
+    "gamma":	0.999,
+    "logger":	{
+        "<spinup.utils.logx.EpochLogger object at 0x12daf1780>":	{
+            "epoch_dict":	{},
+            "exp_name":	"twiss",
+            "first_row":	true,
+            "log_current_row":	{},
+            "log_headers":	[],
+            "output_dir":	"logging/new_environment/SAC/test",
+            "output_file":	{
+                "<_io.TextIOWrapper name='logging/new_environment/SAC/test/progress.txt' mode='w' encoding='UTF-8'>":	{
+                    "mode":	"w"
+                }
+            }
+        }
+    },
+    "logger_kwargs":	{
+        "exp_name":	"twiss",
+        "output_dir":	"logging/new_environment/SAC/test"
+    },
+    "lr":	0.001,
+    "max_ep_len":	15,
+    "polyak":	0.995,
+    "replay_size":	1000000,
+    "save_freq":	1,
+    "seed":	123,
+    "start_steps":	10000,
+    "steps_per_epoch":	1000
+}
