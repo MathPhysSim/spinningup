@@ -7,7 +7,6 @@ import tensorflow as tf
 from spinup.algos.ddpg.ddpg import ddpg
 from spinup.algos.ppo.ppo import ppo
 from spinup.algos.td3.td3 import td3
-from spinup.algos.trpo.trpo import trpo
 from spinup.utils.run_utils import ExperimentGrid
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,7 +15,7 @@ import matplotlib
 import numpy as np
 from spinup.algos.naf.naf import naf
 
-env = transport.transportENV()
+env = transport.transportENV(naf_flag=True)
 env_fn = lambda: env
 # env_fn = lambda : gym.make('Pendulum-v0')
 
@@ -33,12 +32,14 @@ env_fn = lambda: env
 #     eg.add('ac_kwargs:activation', [tf.nn.relu], '')
 #     eg.run(ddpg, num_cpu=4, data_dir='logging/DDPG')
 
-ac_kwargs = dict(hidden_sizes=[100, 100])
-act_noise = 1
-output_dir = 'logging/new_environment/sac/test'
+nafnet_kwargs = dict(hidden_sizes=[100, 100], activation=tf.tanh
+                     , weight_init=tf.random_uniform_initializer(-0.05, 0.05))
+act_noise = .01
+output_dir = 'logging/new_environment/NAF/test'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = sac(env_fn=env_fn, epochs=25, steps_per_epoch=1000, logger_kwargs=logger_kwargs,
-            gamma=0.999, seed=123, max_ep_len=15)
+agent = naf(env_fn=env_fn, epochs=25, steps_per_epoch=100, logger_kwargs=logger_kwargs,
+            nafnet_kwargs=nafnet_kwargs, act_noise=act_noise, gamma=0.999, start_steps=5000,
+            batch_size=100, q_lr=1e-3, update_repeat=20, polyak=0.995, seed=123)
 
 plot_name = 'Stats'
 name = plot_name
@@ -105,7 +106,7 @@ plt.title('Iterations' + plot_suffix)
 
 plt.subplot(312)
 plt.plot(finals, 'r--')
-plt.ylim(0, 1)
+# plt.ylim(0, 1)
 plt.title('Reward' + plot_suffix)
 
 plt.subplot(313)

@@ -9,7 +9,7 @@ init_angles = []
 init_pos = []
 init_rewards = []
 algo = ['NAF', 'SAC']
-selected_algo = algo[1]
+selected_algo = algo[0]
 deterministic = False
 if algo == algo[0]:
     output_dir = 'logging/new_environment/naf/test'
