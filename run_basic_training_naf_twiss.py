@@ -26,12 +26,12 @@ env_fn = lambda: env
 
 nafnet_kwargs = dict(hidden_sizes=[100, 100], activation=tf.tanh
                      , weight_init=tf.random_uniform_initializer(-0.05, 0.05))
-act_noise = .01
+act_noise = .05
 output_dir = 'logging/new_environment/NAF/test'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
 agent = naf(env_fn=env_fn, epochs=25, steps_per_epoch=100, logger_kwargs=logger_kwargs,
             nafnet_kwargs=nafnet_kwargs, act_noise=act_noise, gamma=0.999, start_steps=5000,
-            batch_size=100, q_lr=1e-3, update_repeat=20, polyak=0.995, seed=123)
+            batch_size=100, q_lr=1e-3, update_repeat=50, polyak=0.995, seed=123)
 
 plot_name = 'Stats'
 name = plot_name
@@ -108,12 +108,14 @@ plt.plot(max_2, 'g-')
 plt.plot(min_2, 'r-')
 plt.ylim(-.1, .1)
 plt.title("positions" + plot_suffix)
+plt.savefig('progress1')
 
 plt.figure(2)
 plt.title("Coverage" + plot_suffix)
 # plt.subplot(414)
 plt.scatter(init_state_1, init_state_2, s=80, c=finals, marker='o')
 plt.tight_layout()
+plt.savefig('progress2')
 plt.show()
 
 # env, get_action = load_policy('path/logging1')

@@ -1,12 +1,12 @@
 {
-    "act_noise":	0.01,
+    "act_noise":	0.05,
     "batch_size":	100,
-    "env_fn":	"<function <lambda> at 0x7fd9b76bd268>",
+    "env_fn":	"<function <lambda> at 0x137babc20>",
     "epochs":	25,
     "exp_name":	"twiss",
     "gamma":	0.999,
     "logger":	{
-        "<spinup.utils.logx.EpochLogger object at 0x7fd97129a438>":	{
+        "<spinup.utils.logx.EpochLogger object at 0x137bb0910>":	{
             "epoch_dict":	{},
             "exp_name":	"twiss",
             "first_row":	true,
@@ -32,7 +32,7 @@
             100
         ],
         "weight_init":	{
-            "<tensorflow.python.ops.init_ops.RandomUniform object at 0x7fd97129a0b8>":	{
+            "<tensorflow.python.ops.init_ops.RandomUniform object at 0x137bb0610>":	{
                 "dtype":	{
                     "<dtype: 'float32'>":	{
                         "_type_enum":	1
@@ -52,5 +52,5 @@
     "seed":	123,
     "start_steps":	5000,
     "steps_per_epoch":	100,
-    "update_repeat":	20
+    "update_repeat":	50
 }

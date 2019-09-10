@@ -266,8 +266,8 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
                 logger.store(LossQ=outs[4], QVals=outs[2])
 
                 sess.run(target_update)
-        if ep_len == 50:
-            print(t, env.init_state)
+        # if ep_len == 50:
+        #     print(t, env.init_state)
         if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             if d:
