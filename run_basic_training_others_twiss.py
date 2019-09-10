@@ -1,20 +1,10 @@
-import gym
-
-from spinup.algos.sac.sac import sac
-import PyQt5
-import Environments.transportEnvOld as transport
-import tensorflow as tf
-from spinup.algos.ddpg.ddpg import ddpg
-from spinup.algos.ppo.ppo import ppo
-from spinup.algos.td3.td3 import td3
-from spinup.algos.trpo.trpo import trpo
-from spinup.utils.run_utils import ExperimentGrid
-import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib
 # matplotlib.use("Qt5Agg")
 import numpy as np
-from spinup.algos.naf.naf import naf
+import pandas as pd
+
+import Environments.transportEnvOld as transport
+from spinup.algos.sac.sac import sac
 
 env = transport.transportENV()
 env_fn = lambda: env

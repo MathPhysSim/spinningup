@@ -1,8 +1,8 @@
+import time
+
 import gym
 import numpy as np
-import pandas as pd
 import tensorflow as tf
-import time
 
 from spinup.algos.naf import core
 from spinup.algos.naf.core import get_vars

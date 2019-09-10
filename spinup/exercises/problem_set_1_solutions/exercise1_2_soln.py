@@ -1,6 +1,5 @@
-import tensorflow as tf
 import numpy as np
-
+import tensorflow as tf
 
 EPS = 1e-8
 

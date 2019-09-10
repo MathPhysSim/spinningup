@@ -1,6 +1,7 @@
-from spinup.utils.run_utils import ExperimentGrid
-from spinup import ppo
 import tensorflow as tf
+
+from spinup import ppo
+from spinup.utils.run_utils import ExperimentGrid
 
 if __name__ == '__main__':
     import argparse

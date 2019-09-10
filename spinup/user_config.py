@@ -1,4 +1,3 @@
-import os
 import os.path as osp
 
 # Where experiment outputs are saved by default:

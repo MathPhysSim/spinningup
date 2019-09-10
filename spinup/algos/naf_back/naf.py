@@ -1,7 +1,9 @@
+import time
+
+import gym
 import numpy as np
 import tensorflow as tf
-import gym
-import time
+
 from spinup.algos.naf import core
 from spinup.algos.naf.core import get_vars
 from spinup.utils.logx import EpochLogger

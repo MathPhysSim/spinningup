@@ -1,5 +1,6 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
 from spinup.exercises.problem_set_1 import exercise1_1
 
 """
@@ -96,7 +97,6 @@ if __name__ == '__main__':
     import gym
     import os
     import pandas as pd
-    import psutil
     import time
 
     logdir = "/tmp/experiments/%i"%int(time.time())

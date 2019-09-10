@@ -1,11 +1,8 @@
 import gym
 import tensorflow as tf
+
 from spinup.algos.ddpg.ddpg import ddpg
-
 from spinup.utils.run_utils import ExperimentGrid
-
-import spinup
-from spinup.algos.naf.naf import naf
 
 env_fn = lambda : gym.make('Pendulum-v0')
 

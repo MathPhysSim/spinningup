@@ -1,14 +1,14 @@
 import logging.config
+import math
 import pickle
 import random
 import random as rd
+from math import pi, exp
 
 import gym
-import math
 import numpy as np
 # 3rd party modules
 from gym import spaces
-from math import pi, exp
 from scipy.integrate import quad
 
 import Environments.twissElement as twiss

@@ -1,10 +1,12 @@
+import time
+
+import gym
 import numpy as np
 import tensorflow as tf
-import gym
-import time
+
 from spinup.algos.td3 import core
-from spinup.algos.td3.td3 import td3 as true_td3
 from spinup.algos.td3.core import get_vars
+from spinup.algos.td3.td3 import td3 as true_td3
 from spinup.utils.logx import EpochLogger
 
 """

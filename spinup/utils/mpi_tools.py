@@ -1,6 +1,9 @@
-from mpi4py import MPI
-import os, subprocess, sys
+import os
+import subprocess
+import sys
+
 import numpy as np
+from mpi4py import MPI
 
 
 def mpi_fork(n, bind_to_core=False):
