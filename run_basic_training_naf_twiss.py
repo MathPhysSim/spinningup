@@ -31,7 +31,7 @@ output_dir = 'logging/new_environment/NAF/test'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
 agent = naf(env_fn=env_fn, epochs=25, steps_per_epoch=100, logger_kwargs=logger_kwargs,
             nafnet_kwargs=nafnet_kwargs, act_noise=act_noise, gamma=0.999, start_steps=5000,
-            batch_size=100, q_lr=1e-3, update_repeat=50, polyak=0.995, seed=123)
+            batch_size=100, q_lr=1e-3, update_repeat=50, polyak=0.995, seed=5823)
 
 plot_name = 'Stats'
 name = plot_name
