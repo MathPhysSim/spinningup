@@ -43,6 +43,31 @@ class ReplayBuffer:
                     done=self.done_buf[idxs])
 
 
+from spinup.utils.prioritised_experience_replay import PrioritizedReplayBuffer
+
+class ReplayBufferPER(PrioritizedReplayBuffer):
+    """
+    A simple FIFO experience replay buffer for NAF agents.
+    """
+
+    def __init__(self, obs_dim, act_dim, size):
+        alpha = 1
+        super(ReplayBufferPER, self).__init__(size, alpha)
+
+    def store(self, obs, act, rew, next_obs, done):
+        gamma = 1
+        super(ReplayBufferPER, self).add(obs, act, rew, next_obs, done, gamma)
+
+    def sample_batch(self, batch_size=32):
+        beta = .9
+        obs1, acts, rews, obs2, done, gammas, weights, idxs = super(ReplayBufferPER, self).sample(batch_size, beta)
+        return dict(obs1=obs1,
+                    obs2=obs2,
+                    acts=acts,
+                    rews=rews,
+                    done=done), [weights, idxs]
+
+
 """
 
 Normalized Advantage Function (NAF)
@@ -158,6 +183,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
     # Experience buffer
     replay_buffer = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, size=replay_size)
+    replay_buffer_per = ReplayBufferPER(obs_dim=obs_dim, act_dim=act_dim, size=replay_size)
 
     # Count variables
     var_counts = tuple(core.count_vars(scope) for scope in ['target', 'main'])
@@ -236,6 +262,8 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
 
         # Store experience to replay buffer
         replay_buffer.store(o, a, r, o2, d)
+        replay_buffer_per.store(o, a, r, o2, d)
+
 
         # Super critical, easy to overlook step: make sure to update
         # most recent observation!
@@ -248,6 +276,8 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
             """
             for iteration in range(update_repeat):
                 batch = replay_buffer.sample_batch(batch_size)
+                if len(replay_buffer_per)>batch_size:
+                    batch, priority_info = replay_buffer_per.sample_batch(batch_size)
                 # Q-learning update
 
                 # 1. Calculate value function
@@ -264,6 +294,9 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
                                  a_ph: batch['acts']
                                  })
                 logger.store(LossQ=outs[4], QVals=outs[2])
+                if len(replay_buffer_per) > batch_size:
+                    priorities = np.ones(priority_info[0].shape[-1]) * (abs(outs[1]) * 1 + 1e-7)
+                    replay_buffer_per.update_priorities(idxes=priority_info[1], priorities=priorities)
 
                 sess.run(target_update)
         # if ep_len == 50:
