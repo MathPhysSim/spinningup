@@ -5,6 +5,7 @@ import pandas as pd
 
 import Environments.transportEnvOld as transport
 from spinup.algos.sac.sac import sac
+from spinup.algos.ppo.ppo import ppo
 
 env = transport.transportENV()
 env_fn = lambda: env
@@ -26,8 +27,8 @@ env_fn = lambda: env
 
 output_dir = 'logging/new_environment/SAC/test'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = sac(env_fn=env_fn, epochs=25, steps_per_epoch=1000, logger_kwargs=logger_kwargs,
-            gamma=0.999, seed=123, max_ep_len=15)
+agent = ppo(env_fn=env_fn, epochs=400, steps_per_epoch=1000, logger_kwargs=logger_kwargs,
+            gamma=0.999, seed=123, max_ep_len=200, save_freq=100)
 
 plot_name = 'Stats'
 name = plot_name

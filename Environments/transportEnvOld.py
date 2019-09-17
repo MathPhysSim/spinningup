@@ -27,7 +27,7 @@ class transportENV(gym.Env):
         logging.info("TransportEnv - Version {}".format(self.__version__))
 
         # General variables defining the environment
-        self.MAX_TIME = 100
+        self.MAX_TIME = 15
         self.curr_step = -1
         self.is_finalized = False
         self.mssb = twiss.twissElement(16.1, -0.397093117, 0.045314011, 1.46158005)
@@ -130,7 +130,7 @@ class transportENV(gym.Env):
         else:
             if (self.intensity_on_target[0] > 0.8):
                 episode_is_over = True
-            reward = (reward - 0.8)
+            reward = (reward - 0.8)*10
 
         if episode_is_over:
             self.is_finalized = True  # abuse this a bit

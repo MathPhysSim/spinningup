@@ -26,12 +26,13 @@ env_fn = lambda: env
 
 nafnet_kwargs = dict(hidden_sizes=[100, 100], activation=tf.tanh
                      , weight_init=tf.random_uniform_initializer(-0.05, 0.05))
-act_noise = .05
+act_noise = .1
+
 output_dir = 'logging/new_environment/NAF/test'
 logger_kwargs = dict(output_dir=output_dir, exp_name='twiss')
-agent = naf(env_fn=env_fn, epochs=25, steps_per_epoch=100, logger_kwargs=logger_kwargs,
+agent = naf(env_fn=env_fn, epochs=10, steps_per_epoch=100, logger_kwargs=logger_kwargs,
             nafnet_kwargs=nafnet_kwargs, act_noise=act_noise, gamma=0.999, start_steps=5000,
-            batch_size=100, q_lr=1e-3, update_repeat=50, polyak=0.995, seed=5823)
+            batch_size=100, q_lr=1e-3, update_repeat=50, polyak=0.995, seed=5123)
 
 plot_name = 'Stats'
 name = plot_name
@@ -117,7 +118,7 @@ plt.scatter(init_state_1, init_state_2, s=80, c=finals, marker='o')
 plt.tight_layout()
 plt.savefig('progress2')
 plt.show()
-
+#TODO: verify get action without noise
 # env, get_action = load_policy('path/logging1')
 
 # run_policy(env, get_action, render=False, max_ep_len=200, num_episodes=100)

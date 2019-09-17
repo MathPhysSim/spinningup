@@ -12,6 +12,7 @@ from spinup.utils.logx import EpochLogger
 class ReplayBuffer:
     """
     A simple FIFO experience replay buffer for NAF agents.
+    Based on open ai baselines
     """
 
     def __init__(self, obs_dim, act_dim, size):
@@ -91,7 +92,7 @@ def naf(env_fn, normalized_advantage_function=core.mlp_normalized_advantage_func
         polyak=0.9995, q_lr=1e-4, batch_size=100, start_steps=500, update_repeat=5,
         act_noise=0.001, max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
-
+    Code based on https://github.com/carpedm20/NAF-tensorflow and https://github.com/openai/spinningup
     Args:
         env_fn : A function which creates a copy of the environment.
             The environment must satisfy the OpenAI Gym API.
